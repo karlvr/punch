@@ -99,30 +99,37 @@ For convenience, punch can query your instances with some common filtering optio
 
 For a list of all of your instances (and their state) in the region:
 ```
+PROFILE=my-profile REGION=us-west-1 punch instances
+```
+
+Punch uses environment variables, and configuration, to automatically build filters so it only queries (or controls) instances that match the configuration. Punch will filter match on the AMI image-id, the security group id, the subnet, the key-pair name, the instance type and any tags in the configuration. This helps to ensure that when you use a configuration file, you are only talking to the instances represented by it (as long as your configuration file options are unique; for that purpose use unique tagging).
+
+For a list of all of your instances matching a configuration file:
+```
 punch -f web-server-config.sh instances
 ```
 
-You can apply filters using the same syntax as [`aws ec2 describe-instances`](http://docs.aws.amazon.com/cli/latest/reference/ec2/describe-instances.html):
+You can also apply filters using the same syntax as [`aws ec2 describe-instances`](http://docs.aws.amazon.com/cli/latest/reference/ec2/describe-instances.html):
 ```
-punch -f web-server-config.sh instances -f Name=instance-type,Values=t2.micro
+punch instances -f Name=instance-type,Values=t2.micro
 ```
 
 Punch makes it easy to filter by security group id, tag, running state, client token and instance id.
 ```
-punch -f web-server-config.sh instances -g sg-55512345
-punch -f web-server-config.sh instances -t MyTag=MyValue
-punch -f web-server-config.sh instances -t MyTag
-punch -f web-server-config.sh instances -t =MyValue
-punch -f web-server-config.sh instances -r
-punch -f web-server-config.sh instances -o MyIdempotencyToken
-punch -f web-server-config.sh instances -i i-5551234567890
+punch instances -g sg-55512345
+punch instances -t MyTag=MyValue
+punch instances -t MyTag
+punch instances -t =MyValue
+punch instances -r
+punch instances -o MyIdempotencyToken
+punch instances -i i-5551234567890
 ```
 
 You can combine these and repeat options to build up the required filter.
 
 You can also get the public IP addresses of your instances:
 ```
-punch -f web-server-config.sh ips
+punch ips
 ```
 
 ## Controlling instances
