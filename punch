@@ -1,0 +1,438 @@
+#!/bin/bash -eu
+###############################################################################
+# Punch
+# A script to bootstrap, query and control AWS EC2 instances.
+# 
+# Copyright 2017 Karl von Randow
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+###############################################################################
+
+usage() {
+	cat <<EOF
+usage: $0 [-f <config file>] [-d] <command>
+    -f Configuration file containing environment variables
+    -d Dry run mode
+    -q Quiet mode
+
+    Global environment variables (optional):
+        PROFILE             The aws-cli profile to use (see aws configure)
+        REGION              The AWS region to use
+
+Run command:
+        run [-i <image-id>] [-c <count>] [-t <key=value>]
+
+    Run environment variables (required):
+        AMI                 The image-id for the new instance
+
+    Run environment variables (optional):
+        INSTANCE_TYPE       The EC2 instance type
+        KEY_NAME            The name of the key-pair to associate with the new instance
+        SECURITY_GROUP      The VPC security group id
+        SUBNET              The VPC subnet id
+        ASSOCIATE_PUBLIC_IP_ADDRESS If not empty, associate a public IP address with the new instance
+        COUNT               The number of instances to create
+
+    Bootstrap environment variables (optional):
+        PRIVATE_KEY_FILE    Path to an SSH private key file to deploy to the server
+        BOOTSTRAP_GIT_URL   URL to a git repository to clone on the new instance
+        BOOTSTRAP_GIT_DIR   Path to clone the git repository to on the new instance
+        BOOTSTRAP_SCRIPT    Commands to be executed on the new instance while bootstrapping
+
+    Bootstrap environment variables (advanced):
+        BOOTSTRAP_TEMPLATE  Path to the template file to use for the bootstrap script
+
+Query commands:
+        instances [<instance id> ...]
+        ips [<instance id> ...]
+
+    Query command options:
+        -f <filters>        See aws ec2 run-instances help
+        -g <group ids>      AWS VPC security group ids
+        -t <key=value> or <key> or <=value>    Tag key/value, or just key, or just value
+        -i <instance id> ...
+        -r                  Include only running or pending instances
+
+Control commands:
+        ssh [<instance id> ...] [<command>]
+        csshX [<instance id> ...]        Requires csshX to be installed
+        terminate [<instance id> ...]
+        start [<instance id> ...]
+        stop [<instance id> ...]
+
+    Control command options:
+        See query command options above
+
+    SSH environment variables (optional):
+        IDENTITY            SSH identity file matching the instance's key-pair
+        USERNAME            The SSH username to connect with
+EOF
+	exit 1
+}
+
+global_aws_options=
+additional_aws_options=
+quiet=0
+
+while getopts ":f:dq" opt; do
+	case $opt in
+    	f)
+	      	set -a # So all variables set are exported for our template engine
+			source "$OPTARG"
+			set +a
+	      	;;
+	    d)
+			additional_aws_options="${additional_aws_options:-} --dry-run"
+			;;
+		q)
+			quiet=1
+			;;
+    	\?)
+	      	echo "Invalid option: -$OPTARG" >&2
+	      	;;
+	esac
+done
+
+shift $((OPTIND-1))
+
+announce() {
+	if [[ $quiet == 0 ]]; then
+		echo "$*" >&2
+	fi
+}
+
+if [ ! -z "${PROFILE:-}" ]; then
+	global_aws_options="$global_aws_options --profile $PROFILE"
+fi
+if [ ! -z "${REGION:-}" ]; then
+	global_aws_options="$global_aws_options --region $REGION"
+fi
+
+command=${1:-}
+if [ -z "$command" ]; then
+	usage
+fi
+shift
+
+command_run() {
+	unset OPTIND
+	while getopts ":c:t:i:" opt; do
+		case $opt in
+	    	c)
+			  	COUNT="$OPTARG"
+			  	;;
+			t)
+				tag_key=$(echo "$OPTARG" | cut -d = -f 1)
+				tag_value=$(echo "$OPTARG" | cut -d = -f 2)
+				tags="${tags:-} Key=$tag_key,Value=$tag_value"
+				;;
+			i)
+				AMI="$OPTARG"
+				;;
+	    	\?)
+		      	echo "Invalid option: -$OPTARG" >&2
+		      	;;
+		esac
+	done
+
+	shift $((OPTIND-1))
+
+	if [ -z "${AMI:-}" ]; then
+		echo "AMI is required for run command, either via -i command-line option or AMI environment variable" >&2
+		exit 1
+	fi
+
+	# Configuration
+	set -a # So all variables set are exported for our template engine
+
+	if [ -f "${BOOTSTRAP_PRIVATE_KEY_FILE:-}" ]; then
+		BOOTSTRAP_PRIVATE_KEY=$(cat "$BOOTSTRAP_PRIVATE_KEY_FILE")
+	fi
+
+	if [[ "${BOOTSTRAP_GIT_URL:-}" =~ .*@.*:.* ]]; then
+		BOOTSTRAP_GIT_SSH_HOST=$(echo "$BOOTSTRAP_GIT_URL" | sed -e s/.*@// -e s/:.*//)
+	fi
+
+	set +a
+
+	# https://github.com/tests-always-included/mo
+	MO=$(dirname $0)/lib/mo/mo
+	BOOTSTRAP_TEMPLATE=${BOOTSTRAP_TEMPLATE:-$(dirname $0)/share/bootstrap.sh}
+
+	BOOTSTRAP=$("$MO" "$BOOTSTRAP_TEMPLATE")
+
+	run_options=
+	if [ ! -z "${KEY_NAME:-}" ]; then
+		run_options="$run_options --key-name $KEY_NAME"
+	fi
+	if [ ! -z "${SUBNET:-}" ]; then
+		run_options="$run_options --subnet-id $SUBNET"
+	fi
+	if [ ! -z "${INSTANCE_TYPE:-}" ]; then
+		run_options="$run_options --instance-type $INSTANCE_TYPE"
+	fi
+	if [ ! -z "${SECURITY_GROUP:-}" ]; then
+		run_options="$run_options --security-group-ids $SECURITY_GROUP"
+	fi
+	if [ ! -z "${ASSOCIATE_PUBLIC_IP_ADDRESS:-}" ]; then
+		run_options="$run_options --associate-public-ip-address"
+	fi
+	instance_ids=$(aws ec2 run-instances $additional_aws_options $global_aws_options --image-id "$AMI" \
+		--count "${COUNT:-1}" $run_options \
+		--user-data "$BOOTSTRAP" \
+		--query "Instances[].InstanceId" --output text)
+
+	echo $instance_ids
+
+	# Add tags
+	if [ ! -z "${tags:-}" ]; then
+		aws ec2 create-tags --profile "$PROFILE" --region "$REGION" --resources $instance_ids --tags $tags
+	fi
+}
+
+# Get command-line options common to control commands
+control_options() {
+	instance_ids=
+
+	unset OPTIND
+	while getopts ":f:g:t:i:r" opt; do
+		case $opt in
+	    	f)
+		      	filters="$OPTARG"
+		      	;;
+		    g)
+				filters="${filters:-} Name=instance.group-id,Values=$OPTARG"
+				;;
+			t)
+				tag_key=$(echo "$OPTARG=" | cut -d = -f 1)
+				tag_value=$(echo "$OPTARG=" | cut -d = -f 2)
+
+				if [ ! -z "$tag_key" -a ! -z "$tag_value" ]; then
+					filters="${filters:-} Name=tag:$tag_key,Values=$tag_value"
+				elif [ ! -z "$tag_key" ]; then
+					filters="${filters:-} Name=tag-key,Values=$tag_key"
+				elif [ ! -z "$tag_value" ]; then
+					filters="${filters:-} Name=tag-value,Values=$tag_value"
+				fi
+				;;
+			i)
+			  	instance_ids="$instance_ids $OPTARG"
+			  	;;
+			r)
+				filters="${filters:-} Name=instance-state-name,Values=running,pending"
+				;;
+	    	\?)
+		      	echo "Invalid option: -$OPTARG" >&2
+		      	;;
+		esac
+	done
+
+	shift $((OPTIND-1))
+
+	REMAINING=$*
+}
+
+# describe ec2 instances
+# usage: describe_instances <query>
+describe_instances() {
+	aws ec2 describe-instances $global_aws_options \
+		--instance-ids ${instance_ids:-} \
+		--filters ${filters:-} \
+		--query $1 \
+		--output text
+}
+
+get_ips() {
+	ips=$(describe_instances Reservations[].Instances[].PublicIpAddress)
+
+	if [ -z "$ips" ]; then
+		announce "No matching instances"
+		exit 0
+	fi
+}
+
+get_instance_id_args() {
+	instance_ids_found=0
+	for instance_id in $* ; do
+		if [[ "$instance_id" =~ ^i-[0-9a-fA-F]+$ ]]; then
+			instance_ids="${instance_ids:-} $instance_id"
+			instance_ids_found=$((instance_ids_found+1))
+		else
+			break
+		fi
+	done
+
+	shift $instance_ids_found
+	REMAINING=$*
+}
+
+command_ssh() {
+	control_options $*
+	get_instance_id_args $*
+
+	if [ -z "${filters:-}" ]; then
+		# Default to only try to connect to running or pending instances
+		filters="${filters:-} Name=instance-state-name,Values=running,pending"
+	fi
+
+	get_ips
+
+	ssh_options=
+	if [ ! -z "${IDENTITY:-}" ]; then
+		ssh_options="$ssh_options -i $IDENTITY"
+	fi
+	if [ ! -z "${USERNAME:-}" ]; then
+		ssh_options="$ssh_options -l $USERNAME"
+	fi
+	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -q"
+
+	for ip in $ips ; do
+		announce "*** ssh $ip"
+		/usr/bin/ssh $ssh_options "$ip" $REMAINING
+	done
+}
+
+command_csshX() {
+	control_options $*
+	get_instance_id_args $REMAINING
+	get_ips
+
+	csshX_options=
+	ssh_options=
+	if [ ! -z "${IDENTITY:-}" ]; then
+		ssh_options="$ssh_options -i $IDENTITY"
+	fi
+	if [ ! -z "${USERNAME:-}" ]; then
+		csshX_options="$csshX_options --login $USERNAME"
+	fi
+	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -q"
+
+	csshX $csshX_options --ssh_args "$ssh_options" $ips
+}
+
+get_instance_ids() {
+	instance_ids=$(describe_instances "Reservations[].Instances[].InstanceId")
+
+	if [ -z "$instance_ids" ]; then
+		announce "No matching instances"
+		exit 0
+	fi
+}
+
+command_terminate() {
+	control_options $*
+	get_instance_id_args $REMAINING
+
+	if [ -z "$instance_ids" ]; then
+		# No instance_ids specified, so we query for them
+		if [ -z "${filters:-}" ]; then
+			# Default to skip already terminated instances, so we don't report their instance-ids
+			filters="${filters:-} Name=instance-state-name,Values=running,pending,stopping,stopped"
+		fi
+
+		get_instance_ids
+	fi
+
+	aws ec2 terminate-instances $additional_aws_options $global_aws_options \
+		--instance-ids $instance_ids \
+		--query TerminatingInstances[].InstanceId --output text
+}
+
+command_start() {
+	control_options $*
+	get_instance_id_args $REMAINING
+
+	if [ -z "$instance_ids" ]; then
+		# No instance_ids specified, so we query for them
+		if [ -z "${filters:-}" ]; then
+			# Default to skip instances that aren't stopped
+			filters="${filters:-} Name=instance-state-name,Values=stopping,stopped"
+		fi
+
+		get_instance_ids
+	fi
+
+	aws ec2 start-instances $additional_aws_options $global_aws_options \
+		--instance-ids $instance_ids \
+		--query StartingInstances[].InstanceId --output text
+}
+
+command_stop() {
+	control_options $*
+	get_instance_id_args $REMAINING
+
+	if [ -z "$instance_ids" ]; then
+		# No instance_ids specified, so we query for them
+		if [ -z "${filters:-}" ]; then
+			# Default to skip already stopped or terminated instances, so we don't report their instance-ids
+			filters="${filters:-} Name=instance-state-name,Values=running,pending"
+		fi
+
+		get_instance_ids
+	fi
+
+	aws ec2 stop-instances $additional_aws_options $global_aws_options \
+		--instance-ids $instance_ids \
+		--query StoppingInstances[].InstanceId --output text
+}
+
+command_ips() {
+	control_options $*
+	get_instance_id_args $REMAINING
+	get_ips
+	echo $ips
+}
+
+command_instances() {
+	control_options $*
+	get_instance_id_args $REMAINING
+
+	result=$(describe_instances "Reservations[].Instances[].{InstanceId:InstanceId,State:State.Name}")
+
+	if [ -z "$result" ]; then
+		announce "No matching instances"
+		exit 0
+	fi
+	echo "$result"
+}
+
+case $command in
+	run)
+		command_run $*
+		;;
+	ssh)
+		command_ssh $*
+		;;
+	csshX)
+		command_csshX $*
+		;;
+	terminate)
+		command_terminate $*
+		;;
+	start)
+		command_start $*
+		;;
+	stop)
+		command_stop $*
+		;;
+	ips)
+		command_ips $*
+		;;
+	instances)
+		command_instances $*
+		;;
+	*)
+		echo "Unsupported command: $command" >&2
+		usage
+		;;
+esac
