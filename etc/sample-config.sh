@@ -9,6 +9,7 @@
 #ASSOCIATE_PUBLIC_IP_ADDRESS=1
 #KEY_NAME=
 #INSTANCE_TYPE=
+#TAGS=""
 
 # Bootstrap
 #PRIVATE_KEY_FILE=~/.ssh/letterboxd-automation

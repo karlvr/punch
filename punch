@@ -42,6 +42,7 @@ Run command:
         SUBNET              The VPC subnet id
         ASSOCIATE_PUBLIC_IP_ADDRESS If not empty, associate a public IP address with the new instance
         COUNT               The number of instances to create
+        TAGS                One or more tags to set on the new instances, e.g. name=value
 
     Bootstrap environment variables (optional):
         PRIVATE_KEY_FILE    Path to an SSH private key file to deploy to the server
@@ -150,6 +151,14 @@ command_run() {
 	if [ -z "${AMI:-}" ]; then
 		echo "AMI is required for run command, either via -i command-line option or AMI environment variable" >&2
 		exit 1
+	fi
+
+	if [ ! -z "${TAGS:-}" ]; then
+		for tag in $TAGS; do
+			tag_key=$(echo "$tag" | cut -d = -f 1)
+			tag_value=$(echo "$tag" | cut -d = -f 2)
+			tags="${tags:-} Key=$tag_key,Value=$tag_value"
+		done
 	fi
 
 	# Configuration

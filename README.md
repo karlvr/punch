@@ -45,7 +45,7 @@ Now we run punch to run three new instances:
 punch -f web-server-config.sh run -c 3
 ```
 
-## Bootstrapping an instance
+### Bootstrapping an instance
 
 Bootstrapping an instance involves running scripts on startup that setup the instance for use. Punch supports downloading bootstrap scripts from a Git repository.
 
@@ -70,6 +70,20 @@ punch -f web-server-config.sh run
 ```
 
 You can also replace the bootstrap template that punch uses by setting the `BOOTSTRAP_TEMPLATE` variable. See the default `bootstrap.sh` template for more information. Punch uses [mo](https://github.com/tests-always-included/mo) (a Moustache template engine written in Bash) to perform variable substitution in the bootstrap template.
+
+### Setting tags on new instances
+
+Punch can set tags on your new instances using a `TAGS` environment variable, or using one or more tags specified as a command-line argument.
+
+To use the environment variable / configuration approach, add the following to the configuration file:
+```
+TAGS="name1=value1 name2=value2"
+```
+
+To use the command-line arguments approach:
+```
+punch -f web-server-config.sh run -t name1=value1 -t name2=value2
+```
 
 ## Querying instances
 
