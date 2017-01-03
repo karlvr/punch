@@ -85,6 +85,14 @@ To use the command-line arguments approach:
 punch -f web-server-config.sh run -t name1=value1 -t name2=value2
 ```
 
+### Client tokens
+
+Use [client tokens](http://docs.aws.amazon.com/AWSEC2/latest/APIReference/Run_Instance_Idempotency.html#client-tokens) to ensure idempotency of your requests. Pass a client token as a command-line argument:
+
+```
+punch -f web-server-config.sh run -o MyIdempotencyToken
+```
+
 ## Querying instances
 
 For convenience, punch can query your instances with some common filtering options.
@@ -99,13 +107,14 @@ You can apply filters using the same syntax as [`aws ec2 describe-instances`](ht
 punch -f web-server-config.sh instances -f Name=instance-type,Values=t2.micro
 ```
 
-Punch makes it easy to filter by security group id, tag, running state and instance id.
+Punch makes it easy to filter by security group id, tag, running state, client token and instance id.
 ```
 punch -f web-server-config.sh instances -g sg-55512345
 punch -f web-server-config.sh instances -t MyTag=MyValue
 punch -f web-server-config.sh instances -t MyTag
 punch -f web-server-config.sh instances -t =MyValue
 punch -f web-server-config.sh instances -r
+punch -f web-server-config.sh instances -o MyIdempotencyToken
 punch -f web-server-config.sh instances -i i-5551234567890
 ```
 

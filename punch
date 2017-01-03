@@ -30,7 +30,7 @@ usage: $0 [-f <config file>] [-d] <command>
         REGION              The AWS region to use
 
 Run command:
-        run [-i <image-id>] [-c <count>] [-t <key=value>]
+        run [-i <image-id>] [-c <count>] [-t <key=value>] [-o <client token>]
 
     Run environment variables (required):
         AMI                 The image-id for the new instance
@@ -63,6 +63,7 @@ Query commands:
         -t <key=value> or <key> or <=value>    Tag key/value, or just key, or just value
         -i <instance id> ...
         -r                  Include only running or pending instances
+        -o <client token>   Include only instances with the given client token
 
 Control commands:
         ssh [<instance id> ...] [<command>]
@@ -127,7 +128,7 @@ shift
 
 command_run() {
 	unset OPTIND
-	while getopts ":c:t:i:" opt; do
+	while getopts ":c:t:i:o:" opt; do
 		case $opt in
 	    	c)
 			  	COUNT="$OPTARG"
@@ -139,6 +140,9 @@ command_run() {
 				;;
 			i)
 				AMI="$OPTARG"
+				;;
+			o)
+				client_token="$OPTARG"
 				;;
 	    	\?)
 		      	echo "Invalid option: -$OPTARG" >&2
@@ -196,6 +200,10 @@ command_run() {
 	if [ ! -z "${ASSOCIATE_PUBLIC_IP_ADDRESS:-}" ]; then
 		run_options="$run_options --associate-public-ip-address"
 	fi
+	if [ ! -z "${client_token:-}" ]; then
+		run_options="$run_options --client-token $client_token"
+	fi
+
 	instance_ids=$(aws ec2 run-instances $additional_aws_options $global_aws_options --image-id "$AMI" \
 		--count "${COUNT:-1}" $run_options \
 		--user-data "$BOOTSTRAP" \
@@ -214,7 +222,7 @@ control_options() {
 	instance_ids=
 
 	unset OPTIND
-	while getopts ":f:g:t:i:r" opt; do
+	while getopts ":f:g:t:i:ro:" opt; do
 		case $opt in
 	    	f)
 		      	filters="$OPTARG"
@@ -239,6 +247,9 @@ control_options() {
 			  	;;
 			r)
 				filters="${filters:-} Name=instance-state-name,Values=running,pending"
+				;;
+			o)
+				filters="${filters:-} Name=client-token,Values=$OPTARG"
 				;;
 	    	\?)
 		      	echo "Invalid option: -$OPTARG" >&2
