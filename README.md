@@ -13,7 +13,7 @@ Punch requires the [AWS CLI](https://aws.amazon.com/cli/), so you must install t
 Punch uses environment variables for its configuration, and can load environment variables from a shell script. For example:
 
 ```
-PROFILE=my-profile punch -f web-server-config.sh instances
+PROFILE=my-profile punch instances
 ```
 
 or
