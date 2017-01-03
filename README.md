@@ -1,6 +1,6 @@
 # Punch
 
-Punch simplifies bootstrapping, quering and controlling AWS EC2 instances. Punch is written in bash.
+Punch simplifies bootstrapping, quering and controlling AWS EC2 instances. Punch is written in Bash.
 
 Punch enables you to use scripts to bootstrap instances, rather than expressing your requirements in a DSL. This is well suited if you have an immutable server architecture—that is, you tend to create and destroy instances, rather than looking after them for a long time.
 
@@ -68,6 +68,8 @@ Now we run punch again to run one new instance, this time running bootstrapping 
 ```
 punch -f web-server-config.sh run
 ```
+
+You can also replace the bootstrap template that punch uses by setting the `BOOTSTRAP_TEMPLATE` variable. See the default `bootstrap.sh` template for more information. Punch uses [mo](https://github.com/tests-always-included/mo) (a Moustache template engine written in Bash) to perform variable substitution in the bootstrap template.
 
 ## Querying instances
 
