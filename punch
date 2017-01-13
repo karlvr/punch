@@ -342,7 +342,7 @@ command_ssh() {
 	if [ ! -z "${USERNAME:-}" ]; then
 		ssh_options="$ssh_options -l $USERNAME"
 	fi
-	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -q"
+	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
 	for ip in $ips ; do
 		announce "*** ssh $ip"
