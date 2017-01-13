@@ -326,7 +326,7 @@ get_instance_id_args() {
 command_ssh() {
 	control_options $*
 	add_configuration_filters
-	get_instance_id_args $*
+	get_instance_id_args $REMAINING
 
 	if [ -z "${filters:-}" ]; then
 		# Default to only try to connect to running or pending instances
