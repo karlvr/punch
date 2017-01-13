@@ -67,6 +67,7 @@ Query commands:
 
 Control commands:
         ssh [<instance id> ...] [<command>]
+        scp [<instance id> ...] <source path> <dest path>
         csshX [<instance id> ...]        Requires csshX to be installed
         terminate [<instance id> ...]
         start [<instance id> ...]
@@ -350,6 +351,39 @@ command_ssh() {
 	done
 }
 
+command_scp() {
+	control_options $*
+	add_configuration_filters
+	get_instance_id_args $REMAINING
+
+	if [ -z "${filters:-}" ]; then
+		# Default to only try to connect to running or pending instances
+		filters="${filters:-} Name=instance-state-name,Values=running,pending"
+	fi
+
+	get_ips
+
+	ssh_options=
+	if [ ! -z "${IDENTITY:-}" ]; then
+		ssh_options="$ssh_options -i $IDENTITY"
+	fi
+	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+	source=$(echo $REMAINING | awk {'print $1'})
+	dest=$(echo $REMAINING | awk {'print $2'})
+
+	if [ ! -z "${USERNAME:-}" ]; then
+		dest_prefix="$USERNAME@"
+	else
+		dest_prefix=""
+	fi
+
+	for ip in $ips ; do
+		announce "*** scp $source $dest_prefix$ip:$dest"
+		/usr/bin/scp $ssh_options "$source" "$dest_prefix$ip:$dest"
+	done
+}
+
 command_csshX() {
 	control_options $*
 	add_configuration_filters
@@ -466,6 +500,9 @@ case $command in
 		;;
 	ssh)
 		command_ssh $*
+		;;
+	scp)
+		command_scp $*
 		;;
 	csshX)
 		command_csshX $*
