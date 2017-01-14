@@ -55,7 +55,7 @@ Run command:
 
 Query commands:
         instances [<instance id> ...]
-        ips [<instance id> ...]
+        ip [<instance id> ...]
 
     Query command options:
         -f <filters>        See aws ec2 run-instances help
@@ -472,7 +472,7 @@ command_stop() {
 		--query StoppingInstances[].InstanceId --output text
 }
 
-command_ips() {
+command_ip() {
 	control_options $*
 	add_configuration_filters
 	get_instance_id_args $REMAINING
@@ -516,8 +516,8 @@ case $command in
 	stop)
 		command_stop $*
 		;;
-	ips)
-		command_ips $*
+	ip)
+		command_ip $*
 		;;
 	instances)
 		command_instances $*
