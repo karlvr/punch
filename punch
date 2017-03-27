@@ -380,7 +380,7 @@ command_scp() {
 
 	for ip in $ips ; do
 		announce "*** scp $source $dest_prefix$ip:$dest"
-		/usr/bin/scp $ssh_options "$source" "$dest_prefix$ip:$dest"
+		/usr/bin/scp $ssh_options -r "$source" "$dest_prefix$ip:$dest"
 	done
 }
 
