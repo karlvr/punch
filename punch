@@ -18,6 +18,8 @@
 # limitations under the License.
 ###############################################################################
 
+PUNCH_LIB_DIR="$(dirname $0)/lib"
+
 usage() {
 	cat <<EOF
 usage: $0 [-f <config file>] [-d] <command>
@@ -200,7 +202,7 @@ command_run() {
 	set +a
 
 	# https://github.com/tests-always-included/mo
-	MO=$(dirname $0)/lib/mo/mo
+	MO="$PUNCH_LIB_DIR"/mo/mo
 	BOOTSTRAP_TEMPLATE=${BOOTSTRAP_TEMPLATE:-$(dirname $0)/share/bootstrap.sh}
 
 	BOOTSTRAP=$("$MO" "$BOOTSTRAP_TEMPLATE")
