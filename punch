@@ -30,7 +30,7 @@ usage: $0 [-f <config file>] [-d] <command>
         REGION              The AWS region to use
 
 Run command:
-        run [-i <image-id>] [-c <count>] [-t <key=value>] [-o <client token>]
+        run [-i <image-id>] [-c <count>] [-n <name>] [-t <key=value>] [-o <client token>]
 
     Run environment variables (required):
         AMI                 The image-id for the new instance
@@ -60,6 +60,7 @@ Query commands:
     Query command options:
         -f <filters>        See aws ec2 run-instances help
         -g <group ids>      AWS VPC security group ids
+        -n <name>           The instance name
         -t <key=value> or <key> or <=value>    Tag key/value, or just key, or just value
         -i <instance id> ...
         -r                  Include only running or pending instances
@@ -145,11 +146,14 @@ shift
 
 command_run() {
 	unset OPTIND
-	while getopts ":c:t:i:o:" opt; do
+	while getopts ":c:n:t:i:o:" opt; do
 		case $opt in
 	    	c)
 			  	COUNT="$OPTARG"
 			  	;;
+			n)
+				tags="${tags:-} Key=Name,Value=\"$OPTARG\""
+				;;
 			t)
 				tag_key=$(echo "$OPTARG" | cut -d = -f 1)
 				tag_value=$(echo "$OPTARG" | cut -d = -f 2)
@@ -252,13 +256,16 @@ control_options() {
 	instance_ids=
 
 	unset OPTIND
-	while getopts ":f:g:t:i:ro:" opt; do
+	while getopts ":f:g:n:t:i:ro:" opt; do
 		case $opt in
 	    	f)
 		      	filters="$OPTARG"
 		      	;;
 		    g)
 				filters="${filters:-} Name=instance.group-id,Values=$OPTARG"
+				;;
+			n)
+				add_tag_filter "Name=\"$OPTARG\""
 				;;
 			t)
 				add_tag_filter "$OPTARG"
