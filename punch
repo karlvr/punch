@@ -510,7 +510,7 @@ command_instances() {
 	add_configuration_filters
 	get_instance_id_args $REMAINING
 
-	result=$(describe_instances 'Reservations[].Instances[].[InstanceId,PublicIpAddress,State.Name,Tags[?Key==`Name`]|[0].Value]')
+	result=$(describe_instances 'Reservations[].Instances[].[InstanceId,PublicIpAddress,PrivateIpAddress,State.Name,Tags[?Key==`Name`]|[0].Value]')
 
 	if [ -z "$result" ]; then
 		announce "No matching instances"
