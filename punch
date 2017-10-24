@@ -361,7 +361,7 @@ command_ssh() {
 
 	get_ips
 
-	ssh_options=
+	ssh_options=-t
 	if [ ! -z "${IDENTITY:-}" ]; then
 		ssh_options="$ssh_options -i $IDENTITY"
 	fi
