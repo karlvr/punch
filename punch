@@ -56,8 +56,8 @@ Run command:
         BOOTSTRAP_TEMPLATE  Path to the template file to use for the bootstrap script
 
 Query commands:
-        instances [<instance id> ...]
-        ip [<instance id> ...]
+        instances [<instance id or name> ...]
+        ip [<instance id or name> ...]
 
     Query command options:
         -f <filters>        See aws ec2 run-instances help
@@ -69,12 +69,12 @@ Query commands:
         -o <client token>   Include only instances with the given client token
 
 Control commands:
-        ssh [<instance id> ...] [<command>]
+        ssh [<instance id or name> ...] [-c <command>]
         scp [<instance id> ...] <source path> <dest path>
-        csshX [<instance id> ...]        Requires csshX to be installed
-        terminate [<instance id> ...]
-        start [<instance id> ...]
-        stop [<instance id> ...]
+        csshX [<instance id or name> ...]        Requires csshX to be installed
+        terminate [<instance id or name> ...]
+        start [<instance id or name> ...]
+        stop [<instance id or name> ...]
 
     Control command options:
         See query command options above
@@ -126,9 +126,10 @@ while getopts ":f:dq" opt; do
 done
 
 shift $((OPTIND-1))
+OPTIND=1 # Reset as we use OPTIND to track our progress through the args
 
 announce() {
-	if [[ $quiet == 0 ]]; then
+	if [ $quiet == 0 ]; then
 		echo "$*" >&2
 	fi
 }
@@ -147,7 +148,6 @@ fi
 shift
 
 command_run() {
-	unset OPTIND
 	while getopts ":c:n:t:i:o:" opt; do
 		case $opt in
 	    	c)
@@ -255,9 +255,6 @@ add_tag_filter() {
 
 # Get command-line options common to control commands
 control_options() {
-	instance_ids=
-
-	unset OPTIND
 	while getopts ":f:g:n:t:i:ro:" opt; do
 		case $opt in
 	    	f)
@@ -273,7 +270,7 @@ control_options() {
 				add_tag_filter "$OPTARG"
 				;;
 			i)
-			  	instance_ids="$instance_ids $OPTARG"
+			  	instance_ids="${instance_ids:-} $OPTARG"
 			  	;;
 			r)
 				filters="${filters:-} Name=instance-state-name,Values=running,pending"
@@ -282,14 +279,10 @@ control_options() {
 				filters="${filters:-} Name=client-token,Values=$OPTARG"
 				;;
 	    	\?)
-		      	echo "Invalid option: -$OPTARG" >&2
+		      	echo "Invalid command option: -$OPTARG" >&2
 		      	;;
 		esac
 	done
-
-	shift $((OPTIND-1))
-
-	REMAINING=$*
 }
 
 add_configuration_filters() {
@@ -335,24 +328,59 @@ get_ips() {
 }
 
 get_instance_id_args() {
-	instance_ids_found=0
-	for instance_id in $* ; do
-		if [[ "$instance_id" =~ ^i-[0-9a-fA-F]+$ ]]; then
-			instance_ids="${instance_ids:-} $instance_id"
-			instance_ids_found=$((instance_ids_found+1))
-		else
+	shift $((OPTIND-1))
+
+	local instance
+	for instance in "$@" ; do
+		if [[ "$instance" =~ ^- ]]; then
 			break
 		fi
-	done
 
-	shift $instance_ids_found
-	REMAINING=$*
+		OPTIND=$((OPTIND + 1))
+
+		if [[ "$instance" =~ ^i-[0-9a-fA-F]+$ ]]; then
+			instance_ids="${instance_ids:-} $instance"
+		else
+			local instance_id
+			instance_id=$(aws ec2 describe-instances $global_aws_options --filters Name=tag:Name,Values="$instance" --query Reservations[].Instances[].InstanceId --output text)
+			
+			if [ -n "$instance_id" ]; then
+				instance_ids="${instance_ids:-} $instance_id"
+			else 
+				echo "Failed to resolve instance name: $instance" >&2
+				exit 1
+			fi
+		fi
+	done
+}
+
+ssh_options() {
+	while getopts ":c:" opt; do
+		case $opt in
+			c)
+				ssh_command="$OPTARG"
+				;;
+	    	\?)
+		      	echo "Invalid ssh option: -$OPTARG" >&2
+		      	;;
+		esac
+	done
+}
+
+warn_leftovers() {
+	if [ -n "$*" ]; then
+		echo "Invalid extra arguments: $*" >&2
+	fi
 }
 
 command_ssh() {
-	control_options $*
+	control_options "$@"
 	add_configuration_filters
-	get_instance_id_args $REMAINING
+	get_instance_id_args "$@"
+	ssh_options "$@"
+
+	shift $((OPTIND-1))
+	warn_leftovers "$@"
 
 	if [ -z "${filters:-}" ]; then
 		# Default to only try to connect to running or pending instances
@@ -372,14 +400,16 @@ command_ssh() {
 
 	for ip in $ips ; do
 		announce "*** ssh $ip"
-		/usr/bin/ssh $ssh_options "$ip" $REMAINING
+		/usr/bin/ssh $ssh_options "$ip" "${ssh_command:-}"
 	done
 }
 
 command_scp() {
-	control_options $*
+	control_options "$@"
 	add_configuration_filters
-	get_instance_id_args $REMAINING
+	get_instance_id_args "$@"
+
+	shift $((OPTIND-1))
 
 	if [ -z "${filters:-}" ]; then
 		# Default to only try to connect to running or pending instances
@@ -410,10 +440,12 @@ command_scp() {
 }
 
 command_csshX() {
-	control_options $*
+	control_options "$@"
 	add_configuration_filters
-	get_instance_id_args $REMAINING
+	get_instance_id_args "$@"
 	get_ips
+
+	shift $((OPTIND-1))
 
 	csshX_options=
 	ssh_options=
@@ -438,8 +470,10 @@ get_instance_ids() {
 }
 
 command_terminate() {
-	control_options $*
-	get_instance_id_args $REMAINING
+	control_options "$@"
+	get_instance_id_args "$@"
+
+	shift $((OPTIND-1))
 
 	if [ -z "$instance_ids" ]; then
 		# No instance_ids specified, so we query for them
@@ -458,8 +492,10 @@ command_terminate() {
 }
 
 command_start() {
-	control_options $*
-	get_instance_id_args $REMAINING
+	control_options "$@"
+	get_instance_id_args "$@"
+
+	shift $((OPTIND-1))
 
 	if [ -z "$instance_ids" ]; then
 		# No instance_ids specified, so we query for them
@@ -478,8 +514,10 @@ command_start() {
 }
 
 command_stop() {
-	control_options $*
-	get_instance_id_args $REMAINING
+	control_options "$@"
+	get_instance_id_args "$@"
+
+	shift $((OPTIND-1))
 
 	if [ -z "$instance_ids" ]; then
 		# No instance_ids specified, so we query for them
@@ -498,17 +536,21 @@ command_stop() {
 }
 
 command_ip() {
-	control_options $*
+	control_options "$@"
 	add_configuration_filters
-	get_instance_id_args $REMAINING
+	get_instance_id_args "$@"
+	shift $((OPTIND-1))
+
 	get_ips
 	echo $ips
 }
 
 command_instances() {
-	control_options $*
+	control_options "$@"
 	add_configuration_filters
-	get_instance_id_args $REMAINING
+	get_instance_id_args "$@"
+
+	shift $((OPTIND-1))
 
 	result=$(describe_instances 'Reservations[].Instances[].[InstanceId,PublicIpAddress,PrivateIpAddress,State.Name,Tags[?Key==`Name`]|[0].Value]')
 
@@ -521,31 +563,31 @@ command_instances() {
 
 case $command in
 	run)
-		command_run $*
+		command_run "$@"
 		;;
 	ssh)
-		command_ssh $*
+		command_ssh "$@"
 		;;
 	scp)
-		command_scp $*
+		command_scp "$@"
 		;;
 	csshX)
-		command_csshX $*
+		command_csshX "$@"
 		;;
 	terminate)
-		command_terminate $*
+		command_terminate "$@"
 		;;
 	start)
-		command_start $*
+		command_start "$@"
 		;;
 	stop)
-		command_stop $*
+		command_stop "$@"
 		;;
 	ip)
-		command_ip $*
+		command_ip "$@"
 		;;
 	instances)
-		command_instances $*
+		command_instances "$@"
 		;;
 	*)
 		echo "Unsupported command: $command" >&2
