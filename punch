@@ -78,6 +78,7 @@ Control commands:
 
     Control command options:
         See query command options above
+        -u <username>       The SSH username to connect with
 
     SSH environment variables (optional):
         IDENTITY            SSH identity file matching the instance's key-pair
@@ -255,7 +256,7 @@ add_tag_filter() {
 
 # Get command-line options common to control commands
 control_options() {
-	while getopts ":f:g:n:t:i:ro:" opt; do
+	while getopts ":f:g:n:t:i:ro:u:" opt; do
 		case $opt in
 	    	f)
 		      	filters="$OPTARG"
@@ -277,6 +278,9 @@ control_options() {
 				;;
 			o)
 				filters="${filters:-} Name=client-token,Values=$OPTARG"
+				;;
+			u)
+				USERNAME="$OPTARG"
 				;;
 	    	\?)
 		      	echo "Invalid command option: -$OPTARG" >&2
