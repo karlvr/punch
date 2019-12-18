@@ -21,7 +21,7 @@
 PUNCH_LIB_DIR="$(dirname $0)/lib"
 
 usage() {
-	cat <<EOF
+	cat >&2 <<EOF
 usage: $0 [-f <config file>] [-d] <command>
     -f Configuration file containing environment variables
     -d Dry run mode
