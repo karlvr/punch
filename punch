@@ -263,7 +263,7 @@ add_tag_filter() {
 
 # Get command-line options common to control commands
 control_options() {
-	while getopts ":f:g:n:t:i:ro:u:" opt; do
+	while getopts ":f:g:n:t:i:ro:u:c:" opt; do
 		case $opt in
 	    	f)
 		      	filters="$OPTARG"
@@ -288,6 +288,9 @@ control_options() {
 				;;
 			u)
 				USERNAME="$OPTARG"
+				;;
+			c)
+				ssh_command="$OPTARG"
 				;;
 	    	\?)
 		      	echo "Invalid command option: -$OPTARG" >&2
