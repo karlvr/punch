@@ -69,12 +69,14 @@ Query commands:
         -o <client token>   Include only instances with the given client token
 
 Control commands:
-        ssh [<instance id or name> ...] [-c <command>]
-        scp [<instance id> ...] <source path> <dest path>
-        csshX [<instance id or name> ...]        Requires csshX to be installed
-        terminate [<instance id or name> ...]
-        start [<instance id or name> ...]
-        stop [<instance id or name> ...]
+        ssh [<instance> ...] [-c <command>]
+        scp [<instance> ...] <source path> <dest path>
+        csshX [<instance> ...]        Requires csshX to be installed
+        terminate [<instance> ...]
+        start [<instance> ...]
+        stop [<instance> ...]
+
+          Where <instance> is an instance id or instance name.
 
     Control command options:
         See query command options above
