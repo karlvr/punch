@@ -22,6 +22,11 @@ or
 punch -f web-server-config.sh instances
 ```
 
+### Automatic configuration
+
+Punch looks for a file named `.punch.cfg` starting in the current working directory and continuing 
+up through parent directories.
+
 ## Running an instance
 
 Here is an example configuration file `web-server-config.sh`. This contains all of the settings necessary to run an instance:
@@ -136,7 +141,7 @@ punch ips
 
 You can run commands or scripts on your instances using ssh:
 ```
-punch -f web-server-config.sh ssh 'sudo apt-get update && sudo apt-get upgrade'
+punch -f web-server-config.sh ssh -c 'sudo apt-get update && sudo apt-get upgrade'
 ```
 
 You can also just interactively connect to your instances using ssh, one at a time:
