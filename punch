@@ -70,9 +70,8 @@ Query commands:
 
 Control commands:
         ssh [<instance> ...] [-c <command>]
-        scp <local source path> <remote dest path>  Copies to all matching instances
-        scp <instance>:<source path> <dest path>    Copy from an instance
-        scp <source path> <instance>:<dest path>    Copy to an instance
+        scp <instance>:<source path> <local dest path>    Copy from an instance
+        scp <local source path> [<instance>]:<dest path>  Copy to an instance, or all matching instances
         csshX [<instance> ...]        Requires csshX to be installed
         terminate [<instance> ...]
         start [<instance> ...]
@@ -452,10 +451,14 @@ command_scp() {
 	fi
 
 	local source_prefix=
-	local dest_prefix=
 
 	if [[ "$source" =~ ^([^:]*):(.*)$ ]]; then
 		local source_instance=${BASH_REMATCH[1]}
+		if [ -z "$source_instance" ]; then
+			echo "scp source instance missing: $source" >&2
+			exit 1
+		fi
+
 		source=${BASH_REMATCH[2]}
 
 		clear_instances
@@ -471,19 +474,24 @@ command_scp() {
 		local dest_instance=${BASH_REMATCH[1]}
 		dest=${BASH_REMATCH[2]}
 
-		clear_instances
-		add_instance "$dest_instance"
-		get_ips
-		dest_prefix="$ips:"
-
-		if [ ! -z "${USERNAME:-}" ]; then
-			dest_prefix="$USERNAME@$dest_prefix"
+		# If dest_instance is empty then it means all matching servers, so we fall through
+		if [ -n "$dest_instance" ]; then
+			clear_instances
+			add_instance "$dest_instance"
+			get_ips
+		elif [ -n "$source_prefix" ]; then
+			echo "scp: dest cannot be empty if source is not local" >&2
+			exit 1
+		else
+			get_ips
 		fi
+	elif [ -z "$source_prefix" ]; then
+		echo "scp: either source or dest must be remote" >&2
+		exit 1
 	fi
 
-	if [ -z "$source_prefix" -a -z "$dest_prefix" ]; then
-		get_ips
-
+	local dest_prefix=
+	if [ -z "$source_prefix" ]; then
 		if [ ! -z "${USERNAME:-}" ]; then
 			dest_prefix="$USERNAME@"
 		fi
