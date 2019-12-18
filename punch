@@ -70,7 +70,9 @@ Query commands:
 
 Control commands:
         ssh [<instance> ...] [-c <command>]
-        scp [<instance> ...] <source path> <dest path>
+        scp <local source path> <remote dest path>  Copies to all matching instances
+        scp <instance>:<source path> <dest path>    Copy from an instance
+        scp <source path> <instance>:<dest path>    Copy to an instance
         csshX [<instance> ...]        Requires csshX to be installed
         terminate [<instance> ...]
         start [<instance> ...]
@@ -336,6 +338,27 @@ get_ips() {
 	fi
 }
 
+add_instance() {
+	local instance="$1"
+	if [[ "$instance" =~ ^i-[0-9a-fA-F]+$ ]]; then
+		instance_ids="${instance_ids:-} $instance"
+	else
+		local instance_id
+		instance_id=$(aws ec2 describe-instances $global_aws_options --filters Name=tag:Name,Values="$instance" --query Reservations[].Instances[].InstanceId --output text)
+		
+		if [ -n "$instance_id" ]; then
+			instance_ids="${instance_ids:-} $instance_id"
+		else 
+			echo "Failed to resolve instance name: $instance" >&2
+			exit 1
+		fi
+	fi
+}
+
+clear_instances() {
+	instance_ids=
+}
+
 get_instance_id_args() {
 	shift $((OPTIND-1))
 
@@ -347,19 +370,7 @@ get_instance_id_args() {
 
 		OPTIND=$((OPTIND + 1))
 
-		if [[ "$instance" =~ ^i-[0-9a-fA-F]+$ ]]; then
-			instance_ids="${instance_ids:-} $instance"
-		else
-			local instance_id
-			instance_id=$(aws ec2 describe-instances $global_aws_options --filters Name=tag:Name,Values="$instance" --query Reservations[].Instances[].InstanceId --output text)
-			
-			if [ -n "$instance_id" ]; then
-				instance_ids="${instance_ids:-} $instance_id"
-			else 
-				echo "Failed to resolve instance name: $instance" >&2
-				exit 1
-			fi
-		fi
+		add_instance "$instance"
 	done
 }
 
@@ -416,7 +427,6 @@ command_ssh() {
 command_scp() {
 	control_options "$@"
 	add_configuration_filters
-	get_instance_id_args "$@"
 
 	shift $((OPTIND-1))
 
@@ -425,27 +435,64 @@ command_scp() {
 		filters="${filters:-} Name=instance-state-name,Values=running,pending"
 	fi
 
-	get_ips
-
 	ssh_options=
 	if [ ! -z "${IDENTITY:-}" ]; then
 		ssh_options="$ssh_options -i $IDENTITY"
 	fi
 	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
-	source=$(echo $REMAINING | awk {'print $1'})
-	dest=$(echo $REMAINING | awk {'print $2'})
+	source=$(echo $* | awk {'print $1'})
+	dest=$(echo $* | awk {'print $2'})
 
-	if [ ! -z "${USERNAME:-}" ]; then
-		dest_prefix="$USERNAME@"
-	else
-		dest_prefix=""
+	if [ -z "$source" -o -z "$dest" ]; then
+		usage
 	fi
 
-	for ip in $ips ; do
-		announce "*** scp $source $dest_prefix$ip:$dest"
-		/usr/bin/scp $ssh_options -r "$source" "$dest_prefix$ip:$dest"
-	done
+	local source_prefix=
+	local dest_prefix=
+
+	if [[ "$source" =~ ^([^:]*):(.*)$ ]]; then
+		local source_instance=${BASH_REMATCH[1]}
+		source=${BASH_REMATCH[2]}
+
+		clear_instances
+		add_instance "$source_instance"
+		get_ips
+		source_prefix="$ips:"
+
+		if [ ! -z "${USERNAME:-}" ]; then
+			source_prefix="$USERNAME@$source_prefix"
+		fi
+	fi
+	if [[ "$dest" =~ ^([^:]*):(.*)$ ]]; then
+		local dest_instance=${BASH_REMATCH[1]}
+		dest=${BASH_REMATCH[2]}
+
+		clear_instances
+		add_instance "$dest_instance"
+		get_ips
+		dest_prefix="$ips:"
+
+		if [ ! -z "${USERNAME:-}" ]; then
+			dest_prefix="$USERNAME@$dest_prefix"
+		fi
+	fi
+
+	if [ -z "$source_prefix" -a -z "$dest_prefix" ]; then
+		get_ips
+
+		if [ ! -z "${USERNAME:-}" ]; then
+			dest_prefix="$USERNAME@"
+		fi
+
+		for ip in $ips ; do
+			announce "*** scp $source $dest_prefix$ip:$dest"
+			/usr/bin/scp $ssh_options -r "$source" "$dest_prefix$ip:$dest"
+		done
+	else
+		announce "*** scp $source_prefix$source $dest_prefix$dest"
+		/usr/bin/scp $ssh_options -r "$source_prefix$source" "$dest_prefix$dest"
+	fi
 }
 
 command_csshX() {
