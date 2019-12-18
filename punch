@@ -109,7 +109,7 @@ if [ ! -z "$config_file" ]; then
 	source "$config_file"
 fi
 
-while getopts ":f:dq" opt; do
+while getopts ":f:dqh" opt; do
 	case $opt in
     	f)
 	      	set -a # So all variables set are exported for our template engine
@@ -121,6 +121,9 @@ while getopts ":f:dq" opt; do
 			;;
 		q)
 			quiet=1
+			;;
+		h)
+			usage
 			;;
     	\?)
 	      	echo "Invalid option: -$OPTARG" >&2
