@@ -332,7 +332,8 @@ describe_instances() {
 }
 
 get_ips() {
-	ips=$(describe_instances Reservations[].Instances[].PublicIpAddress)
+	# Choose the public IP address if there one, otherwise fall back to the private
+	ips=$(describe_instances Reservations[].Instances[].[PublicIpAddress,PrivateIpAddress] | sed -e 's/None\s*//' | awk '{ print $1 }')
 
 	if [ -z "$ips" ]; then
 		announce "No matching instances"
