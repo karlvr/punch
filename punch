@@ -127,12 +127,12 @@ fi
 
 while getopts ":f:dqh" opt; do
 	case $opt in
-    	f)
-	      	set -a # So all variables set are exported for our template engine
+		f)
+			set -a # So all variables set are exported for our template engine
 			source "$OPTARG"
 			set +a
-	      	;;
-	    d)
+			;;
+		d)
 			additional_aws_options="${additional_aws_options:-} --dry-run"
 			;;
 		q)
@@ -141,9 +141,9 @@ while getopts ":f:dqh" opt; do
 		h)
 			usage
 			;;
-    	\?)
-	      	echo "Invalid option: -$OPTARG" >&2
-	      	;;
+		\?)
+			echo "Invalid option: -$OPTARG" >&2
+			;;
 	esac
 done
 
@@ -172,9 +172,9 @@ shift
 command_run() {
 	while getopts ":c:n:t:i:o:" opt; do
 		case $opt in
-	    	c)
-			  	COUNT="$OPTARG"
-			  	;;
+			c)
+				COUNT="$OPTARG"
+				;;
 			n)
 				tags="${tags:-} Key=Name,Value=\"$OPTARG\""
 				;;
@@ -189,9 +189,9 @@ command_run() {
 			o)
 				client_token="$OPTARG"
 				;;
-	    	\?)
-		      	echo "Invalid option: -$OPTARG" >&2
-		      	;;
+			\?)
+				echo "Invalid option: -$OPTARG" >&2
+				;;
 		esac
 	done
 
@@ -283,10 +283,10 @@ add_tag_filter() {
 control_options() {
 	while getopts ":f:g:n:t:i:ro:u:c:" opt; do
 		case $opt in
-	    	f)
-		      	filters="$OPTARG"
-		      	;;
-		    g)
+			f)
+				filters="$OPTARG"
+				;;
+			g)
 				filters="${filters:-} Name=instance.group-id,Values=$OPTARG"
 				;;
 			n)
@@ -296,8 +296,8 @@ control_options() {
 				add_tag_filter "$OPTARG"
 				;;
 			i)
-			  	instance_ids="${instance_ids:-} $OPTARG"
-			  	;;
+				instance_ids="${instance_ids:-} $OPTARG"
+				;;
 			r)
 				filters="${filters:-} Name=instance-state-name,Values=running,pending"
 				;;
@@ -310,9 +310,9 @@ control_options() {
 			c)
 				ssh_command="$OPTARG"
 				;;
-	    	\?)
-		      	echo "Invalid command option: -$OPTARG" >&2
-		      	;;
+			\?)
+				echo "Invalid command option: -$OPTARG" >&2
+				;;
 		esac
 	done
 }
@@ -402,9 +402,9 @@ ssh_options() {
 			c)
 				ssh_command="$OPTARG"
 				;;
-	    	\?)
-		      	echo "Invalid ssh option: -$OPTARG" >&2
-		      	;;
+			\?)
+				echo "Invalid ssh option: -$OPTARG" >&2
+				;;
 		esac
 	done
 }
