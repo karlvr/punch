@@ -439,11 +439,9 @@ command_ssh() {
 	shift $((OPTIND-1))
 	warn_leftovers "$@"
 
-	if [ -z "${filters:-}" ]; then
-		# Default to only try to connect to running or pending instances
-		filters="${filters:-} Name=instance-state-name,Values=running,pending"
-	fi
-
+	# Only try to connect to running or pending instances
+	filters="${filters:-} Name=instance-state-name,Values=running,pending"
+	
 	get_ips
 
 	ssh_options=-t
@@ -467,10 +465,8 @@ command_scp() {
 
 	shift $((OPTIND-1))
 
-	if [ -z "${filters:-}" ]; then
-		# Default to only try to connect to running or pending instances
-		filters="${filters:-} Name=instance-state-name,Values=running,pending"
-	fi
+	# Only try to connect to running or pending instances
+	filters="${filters:-} Name=instance-state-name,Values=running,pending"
 
 	ssh_options=
 	if [ ! -z "${IDENTITY:-}" ]; then
@@ -545,6 +541,10 @@ command_csshX() {
 	control_options "$@"
 	add_configuration_filters
 	get_instance_id_args "$@"
+
+	# Only try to connect to running or pending instances
+	filters="${filters:-} Name=instance-state-name,Values=running,pending"
+
 	get_ips
 
 	shift $((OPTIND-1))
