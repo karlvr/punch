@@ -568,7 +568,7 @@ command_terminate() {
 
 	shift $((OPTIND-1))
 
-	if [ -z "$instance_ids" ]; then
+	if [ -z "${instance_ids:-}" ]; then
 		# No instance_ids specified, so we query for them
 		if [ -z "${filters:-}" ]; then
 			# Default to skip already terminated instances, so we don't report their instance-ids
@@ -579,9 +579,10 @@ command_terminate() {
 		get_instance_ids
 	fi
 
-	aws ec2 terminate-instances $additional_aws_options $global_aws_options \
+	PAGER= aws ec2 terminate-instances $additional_aws_options $global_aws_options \
 		--instance-ids $instance_ids \
-		--query TerminatingInstances[].InstanceId --output text
+		--query TerminatingInstances[].InstanceId \
+		--output text
 }
 
 command_start() {
