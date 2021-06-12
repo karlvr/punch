@@ -265,7 +265,7 @@ command_run() {
 		run_options="$run_options --client-token $client_token"
 	fi
 
-	instance_ids=$(aws ec2 run-instances $additional_aws_options $global_aws_options --image-id "$AMI" \
+	instance_ids=$(PAGER= aws ec2 run-instances $additional_aws_options $global_aws_options --image-id "$AMI" \
 		--count "${COUNT:-1}" $run_options \
 		--user-data "$BOOTSTRAP" \
 		--query "Instances[].InstanceId" --output text)
@@ -274,7 +274,7 @@ command_run() {
 
 	# Add tags
 	if [ ! -z "${tags:-}" ]; then
-		aws ec2 create-tags --profile "$PROFILE" --region "$REGION" --resources $instance_ids --tags $tags
+		PAGER= aws ec2 create-tags --profile "$PROFILE" --region "$REGION" --resources $instance_ids --tags $tags
 	fi
 }
 
