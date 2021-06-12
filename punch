@@ -53,6 +53,7 @@ Run command:
           * owner (defaults to official owner for the distro)
 
     Run environment variables (optional):
+        NAME                The EC2 instance name
         INSTANCE_TYPE       The EC2 instance type
         KEY_NAME            The name of the key-pair to associate with the new instance
         SECURITY_GROUP      The VPC security group id
@@ -221,6 +222,9 @@ command_run() {
 			tags="${tags:-} Key=$tag_key,Value=$tag_value"
 		done
 	fi
+	if [ -n "${NAME:-}" ]; then
+		tags="${tags:-} Key=Name,Value=$NAME"
+	fi
 
 	# Configuration
 	set -a # So all variables set are exported for our template engine
@@ -241,7 +245,7 @@ command_run() {
 
 	BOOTSTRAP=$("$MO" "$BOOTSTRAP_TEMPLATE")
 
-	run_options=
+	local run_options=
 	if [ ! -z "${KEY_NAME:-}" ]; then
 		run_options="$run_options --key-name $KEY_NAME"
 	fi
@@ -345,6 +349,9 @@ add_configuration_filters() {
 		for tag in $TAGS; do
 			add_tag_filter "$tag"
 		done
+	fi
+	if [ ! -z "${NAME:-}" ]; then
+		add_tag_filter "Name=$NAME"
 	fi
 }
 
