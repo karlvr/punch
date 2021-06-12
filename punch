@@ -19,6 +19,7 @@
 ###############################################################################
 
 PUNCH_LIB_DIR="$(dirname $0)/lib"
+. "$PUNCH_LIB_DIR"/image.sh
 
 usage() {
 	cat >&2 <<EOF
@@ -36,6 +37,20 @@ Run command:
 
     Run environment variables (required):
         AMI                 The image-id for the new instance
+     or IMAGE               <distro> <filters>
+
+        The supported distros are:
+          * ubuntu
+
+        After the distro name you MAY include filters:
+          * release (e.g. focal)
+          * architecture (default: x86_64)
+          * root_device_type (default: ebs)
+          * image_type (default: machine)
+          * hypervisor (default: xen)
+          * virtualization_type (default: hvm)
+          * volume_type (e.g. gp2)
+          * owner (defaults to official owner for the distro)
 
     Run environment variables (optional):
         INSTANCE_TYPE       The EC2 instance type
@@ -183,8 +198,12 @@ command_run() {
 	shift $((OPTIND-1))
 
 	if [ -z "${AMI:-}" ]; then
-		echo "AMI is required for run command, either via -i command-line option or AMI environment variable" >&2
-		exit 1
+		if [ -n "${IMAGE:-}" ]; then
+			AMI=$(find_image_with_distro $IMAGE)
+		else
+			echo "AMI or IMAGE is required for run command, either via -i command-line option or AMI environment variable" >&2
+			exit 1
+		fi
 	fi
 
 	if [ ! -z "${TAGS:-}" ]; then

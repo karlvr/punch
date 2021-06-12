@@ -35,6 +35,9 @@ PROFILE=my-profile
 REGION=us-west-1
 
 AMI=ami-d8bdebb8
+# or
+IMAGE=ubuntu release=focal
+
 SECURITY_GROUP=sg-55512345
 SUBNET=subnet-55512345
 ASSOCIATE_PUBLIC_IP_ADDRESS=1
@@ -59,10 +62,10 @@ We add the following to the example configuration file `web-server-config.sh` ab
 BOOTSTRAP_PRIVATE_KEY_FILE=~/.ssh/id_automation
 BOOTSTRAP_GIT_URL=git@github.com:karlvr/bootstrap-scripts.git
 BOOTSTRAP_GIT_DIR=/opt/bootstrap
-BOOTSTRAP_SCRIPT="
+BOOTSTRAP_SCRIPT='
 /opt/bootstrap/stage1.sh
 /opt/bootstrap/stage2.sh
-"
+'
 ```
 
 All of these configuration options are optional. A private key file is only required if you bootstrap scripts git repository required authentication. You can also use `https` git URLs.
