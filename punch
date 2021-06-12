@@ -61,6 +61,7 @@ Run command:
         ASSOCIATE_PUBLIC_IP_ADDRESS If not empty, associate a public IP address with the new instance
         COUNT               The number of instances to create
         TAGS                One or more tags to set on the new instances, e.g. name=value
+        ROOT_VOLUME_SIZE    The size of the root volume in GiB
 
     Bootstrap environment variables (optional):
         PRIVATE_KEY_FILE    Path to an SSH private key file to deploy to the server
@@ -263,6 +264,10 @@ command_run() {
 	fi
 	if [ ! -z "${client_token:-}" ]; then
 		run_options="$run_options --client-token $client_token"
+	fi
+	if [ ! -z "${ROOT_VOLUME_SIZE:-}" ]; then
+		local root_volume_device_name=$(aws ec2 describe-images $global_aws_options --image-ids "$AMI" --output text --query 'Images[].BlockDeviceMappings[0].DeviceName')
+		run_options="$run_options --block-device-mappings DeviceName=$root_volume_device_name,Ebs={VolumeSize=$ROOT_VOLUME_SIZE}"
 	fi
 
 	instance_ids=$(PAGER= aws ec2 run-instances $additional_aws_options $global_aws_options --image-id "$AMI" \
