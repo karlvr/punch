@@ -123,12 +123,14 @@ findConfig() {
 config_file=$(findConfig)
 if [ ! -z "$config_file" ]; then
 	set +e
+	set -a # So all variables are exported, for the ones we pass to other commands like mo
 	source "$config_file"
 	if [ $? != 0 ]; then
 		echo "Failed to source config file: $config_file" >&2
 		exit 1
 	fi
 	set -e
+	set +a
 fi
 
 while getopts ":f:dqh" opt; do
