@@ -677,7 +677,7 @@ case $command in
 	stop)
 		command_stop "$@"
 		;;
-	ip)
+	ip|ips)
 		command_ip "$@"
 		;;
 	instances)
