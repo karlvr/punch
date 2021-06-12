@@ -99,7 +99,7 @@ Control commands:
         -u <username>       The SSH username to connect with
 
     SSH environment variables (optional):
-        IDENTITY            SSH identity file matching the instance's key-pair
+        IDENTITY            Path to an SSH key file matching the instance's key-pair
         USERNAME            The SSH username to connect with
 EOF
 	exit 1
