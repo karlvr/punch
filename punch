@@ -37,7 +37,7 @@ Run command:
 
     Run environment variables (required):
         AMI                 The image-id for the new instance
-     or IMAGE               <distro> <filters>
+     or IMAGE               "<distro> <filters>"
 
         The supported distros are:
           * ubuntu

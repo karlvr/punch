@@ -36,7 +36,7 @@ REGION=us-west-1
 
 AMI=ami-d8bdebb8
 # or
-IMAGE=ubuntu release=focal
+IMAGE="ubuntu release=focal"
 
 SECURITY_GROUP=sg-55512345
 SUBNET=subnet-55512345
