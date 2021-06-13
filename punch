@@ -93,6 +93,7 @@ Control commands:
         terminate [<instance> ...]
         start [<instance> ...]
         stop [<instance> ...]
+		wait [<instance> ...] Wait for instances to have a settled state
 
           Where <instance> is an instance id or instance name.
 
@@ -281,6 +282,23 @@ command_run() {
 	if [ ! -z "${tags:-}" ]; then
 		PAGER= aws ec2 create-tags $additional_aws_options $global_aws_options --resources $instance_ids --tags $tags
 	fi
+}
+
+command_wait() {
+	control_options "$@"
+	add_configuration_filters
+	get_instance_id_args "$@"
+	shift $((OPTIND-1))
+
+	wait_for_no_pending
+}
+
+wait_for_no_pending() {
+	result=$(describe_instances 'Reservations[].Instances[].[State.Name]' | grep -E 'pending|shutting-down|stopping' || true)
+	while [ -n "$result" ]; do
+		sleep 5
+		result=$(describe_instances 'Reservations[].Instances[].[State.Name]' | grep -E 'pending|shutting-down|stopping' || true)
+	done
 }
 
 add_tag_filter() {
@@ -696,6 +714,9 @@ case $command in
 		;;
 	instances)
 		command_instances "$@"
+		;;
+	wait)
+		command_wait "$@"
 		;;
 	*)
 		echo "Unsupported command: $command" >&2
