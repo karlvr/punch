@@ -664,7 +664,7 @@ command_start() {
 
 	shift $((OPTIND-1))
 
-	if [ -z "$instance_ids" ]; then
+	if [ -z "${instance_ids:-}" ]; then
 		# No instance_ids specified, so we query for them
 		if [ -z "${filters:-}" ]; then
 			# Default to skip instances that aren't stopped
@@ -686,7 +686,7 @@ command_stop() {
 
 	shift $((OPTIND-1))
 
-	if [ -z "$instance_ids" ]; then
+	if [ -z "${instance_ids:-}" ]; then
 		# No instance_ids specified, so we query for them
 		if [ -z "${filters:-}" ]; then
 			# Default to skip already stopped or terminated instances, so we don't report their instance-ids
