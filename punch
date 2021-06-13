@@ -63,6 +63,7 @@ Run command:
         COUNT               The number of instances to create
         TAGS                One or more tags to set on the new instances, e.g. name=value
         ROOT_VOLUME_SIZE    The size of the root volume in GiB
+		REMOVE_SSH_KNOWN_HOST The IP address to remove from $HOME/.ssh/known_hosts
 
     Bootstrap environment variables (optional):
         PRIVATE_KEY_FILE    Path to an SSH private key file to deploy to the server
@@ -291,6 +292,10 @@ command_run() {
 			PAGER= aws ec2 associate-address $additional_aws_options $global_aws_options --allocation-id "$ASSOCIATE_ADDRESS" --instance-id "$instance_id" --allow-reassociation > /dev/null
 			break
 		done
+	fi
+
+	if [ -n "${REMOVE_SSH_KNOWN_HOST:-}" ]; then
+		sed -i '' -e "/$REMOVE_SSH_KNOWN_HOST/d" "$HOME/.ssh/known_hosts"
 	fi
 }
 
