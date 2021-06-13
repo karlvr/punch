@@ -59,6 +59,7 @@ Run command:
         SECURITY_GROUP      The VPC security group id
         SUBNET              The VPC subnet id
         ASSOCIATE_PUBLIC_IP_ADDRESS If not empty, associate a public IP address with the new instance
+		ASSOCIATE_ADDRESS   The elastic IP allocation ID to associate the new instance with (if only one)
         COUNT               The number of instances to create
         TAGS                One or more tags to set on the new instances, e.g. name=value
         ROOT_VOLUME_SIZE    The size of the root volume in GiB
@@ -281,6 +282,15 @@ command_run() {
 	# Add tags
 	if [ ! -z "${tags:-}" ]; then
 		PAGER= aws ec2 create-tags $additional_aws_options $global_aws_options --resources $instance_ids --tags $tags
+	fi
+
+	# Associate IPs
+	if [ -n "${ASSOCIATE_ADDRESS:-}" ]; then
+		wait_for_no_pending
+		for instance_id in $instance_ids ; do
+			PAGER= aws ec2 associate-address $additional_aws_options $global_aws_options --allocation-id "$ASSOCIATE_ADDRESS" --instance-id "$instance_id" --allow-reassociation > /dev/null
+			break
+		done
 	fi
 }
 
