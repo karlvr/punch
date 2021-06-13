@@ -63,6 +63,7 @@ Run command:
         COUNT               The number of instances to create
         TAGS                One or more tags to set on the new instances, e.g. name=value
         ROOT_VOLUME_SIZE    The size of the root volume in GiB
+		READY_SCRIPT		Commands to be executed when the instance is ready
 		REMOVE_SSH_KNOWN_HOST The IP address to remove from $HOME/.ssh/known_hosts
 
     Bootstrap environment variables (optional):
@@ -297,6 +298,13 @@ command_run() {
 	if [ -n "${REMOVE_SSH_KNOWN_HOST:-}" ]; then
 		sed -i '' -e "/$REMOVE_SSH_KNOWN_HOST/d" "$HOME/.ssh/known_hosts"
 	fi
+
+	# Ready script
+	if [ -n "${READY_SCRIPT:-}" ]; then
+		wait_for_port 22
+
+		eval "$READY_SCRIPT"
+	fi
 }
 
 command_wait() {
@@ -314,6 +322,24 @@ wait_for_no_pending() {
 		sleep 5
 		result=$(describe_instances 'Reservations[].Instances[].[State.Name]' | grep -E 'pending|shutting-down|stopping' || true)
 	done
+}
+
+wait_for_port() {
+	port="$1"
+	get_ips
+	set +e
+
+	for ip in $ips; do
+		local success=
+		while [ -z "$success" ]; do
+			nc -z -G 5 "$ip" "$port" 2>/dev/null
+			if [ $? == 0 ]; then
+				success=1
+			fi
+		done
+	done
+
+	set -e
 }
 
 add_tag_filter() {
