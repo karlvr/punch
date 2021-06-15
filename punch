@@ -104,6 +104,7 @@ Control commands:
     Control command options:
         See query command options above
         -u <username>       The SSH username to connect with
+        -p                  Prefer private IP addresses
 
     SSH environment variables (optional):
         IDENTITY            Path to an SSH key file matching the instance's key-pair
@@ -115,6 +116,7 @@ EOF
 global_aws_options=
 additional_aws_options=
 quiet=0
+prefer_private_ips=
 
 findConfig() {
 	local search_dir="$PWD"
@@ -361,7 +363,7 @@ add_tag_filter() {
 
 # Get command-line options common to control commands
 control_options() {
-	while getopts ":f:g:n:t:i:ro:u:c:" opt; do
+	while getopts ":f:g:n:t:i:ro:u:c:p" opt; do
 		case $opt in
 			f)
 				filters="$OPTARG"
@@ -389,6 +391,9 @@ control_options() {
 				;;
 			c)
 				ssh_command="$OPTARG"
+				;;
+			p)
+				prefer_private_ips=1
 				;;
 			\?)
 				echo "Invalid command option: -$OPTARG" >&2
@@ -434,9 +439,15 @@ describe_instances() {
 }
 
 get_ips() {
+	local ip_choice
 	# Choose the public IP address if there one, otherwise fall back to the private
-	ips=$(describe_instances Reservations[].Instances[].[PublicIpAddress,PrivateIpAddress] | sed -e 's/None\s*//g' | awk '{ print $1 }')
+	if [ -n "$prefer_private_ips" ]; then
+		ip_choice="PrivateIpAddress,PublicIpAddress"
+	else
+		ip_choice="PublicIpAddress,PrivateIpAddress"
+	fi
 
+	ips=$(describe_instances Reservations[].Instances[].[$ip_choice] | sed -e 's/None\s*//g' | awk '{ print $1 }')
 	if [ -z "$ips" ]; then
 		announce "No matching instances"
 		exit 0
