@@ -58,8 +58,9 @@ Run command:
         KEY_NAME            The name of the key-pair to associate with the new instance
         SECURITY_GROUP      The VPC security group id
         SUBNET              The VPC subnet id
+        PRIVATE_IP_ADDRESS  The private IP address to request
         ASSOCIATE_PUBLIC_IP_ADDRESS If not empty, associate a public IP address with the new instance
-		ASSOCIATE_ADDRESS   The elastic IP allocation ID to associate the new instance with (if only one)
+        ASSOCIATE_ADDRESS   The elastic IP allocation ID to associate the new instance with (if only one)
         COUNT               The number of instances to create
         TAGS                One or more tags to set on the new instances, e.g. name=value
         ROOT_VOLUME_SIZE    The size of the root volume in GiB
@@ -256,6 +257,9 @@ command_run() {
 	fi
 	if [ ! -z "${SUBNET:-}" ]; then
 		run_options="$run_options --subnet-id $SUBNET"
+	fi
+	if [ -n "${PRIVATE_IP_ADDRESS:-}" ]; then
+		run_options="$run_options --private-ip-address $PRIVATE_IP_ADDRESS"
 	fi
 	if [ ! -z "${INSTANCE_TYPE:-}" ]; then
 		run_options="$run_options --instance-type $INSTANCE_TYPE"
