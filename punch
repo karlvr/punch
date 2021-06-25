@@ -57,6 +57,7 @@ Run command:
         INSTANCE_TYPE       The EC2 instance type
         KEY_NAME            The name of the key-pair to associate with the new instance
         SECURITY_GROUP      The VPC security group id
+        INSTANCE_PROFILE	The name of the IAM instance profile to attach
         SUBNET              The VPC subnet id
         PRIVATE_IP_ADDRESS  The private IP address to request
         ASSOCIATE_PUBLIC_IP_ADDRESS If not empty, associate a public IP address with the new instance
@@ -268,6 +269,9 @@ command_run() {
 	fi
 	if [ ! -z "${SECURITY_GROUP:-}" ]; then
 		run_options="$run_options --security-group-ids $SECURITY_GROUP"
+	fi
+	if [ ! -z "${INSTANCE_PROFILE:-}" ]; then
+		run_options="$run_options --iam-instance-profile Name=\"$INSTANCE_PROFILE\""
 	fi
 	if [ ! -z "${ASSOCIATE_PUBLIC_IP_ADDRESS:-}" ]; then
 		run_options="$run_options --associate-public-ip-address"
