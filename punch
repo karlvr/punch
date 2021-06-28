@@ -65,8 +65,9 @@ Run command:
         COUNT               The number of instances to create
         TAGS                One or more tags to set on the new instances, e.g. name=value
         ROOT_VOLUME_SIZE    The size of the root volume in GiB
-		READY_SCRIPT		Commands to be executed when the instance is ready
-		REMOVE_SSH_KNOWN_HOST The IP address to remove from $HOME/.ssh/known_hosts
+        READY_SCRIPT		Commands to be executed when the instance is ready
+        REMOVE_SSH_KNOWN_HOST The IP address to remove from $HOME/.ssh/known_hosts
+        NO_SOURCE_DEST_CHECK If not empty, dissable the source-dest check (required for NAT instances)
 
     Bootstrap environment variables (optional):
         PRIVATE_KEY_FILE    Path to an SSH private key file to deploy to the server
@@ -294,6 +295,13 @@ command_run() {
 	# Add tags
 	if [ ! -z "${tags:-}" ]; then
 		PAGER= aws ec2 create-tags $additional_aws_options $global_aws_options --resources $instance_ids --tags $tags
+	fi
+
+	# source-dest check
+	if [ -n "${NO_SOURCE_DEST_CHECK:-}" ]; then
+		for instance_id in $instance_ids ; do
+			PAGER= aws ec2 modify-instance-attribute $additional_aws_options $global_aws_options --instance-id $instance_id --no-source-dest-check
+		done
 	fi
 
 	# Associate IPs
