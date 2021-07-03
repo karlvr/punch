@@ -68,6 +68,7 @@ Run command:
         READY_SCRIPT		Commands to be executed when the instance is ready
         REMOVE_SSH_KNOWN_HOST The IP address to remove from $HOME/.ssh/known_hosts
         NO_SOURCE_DEST_CHECK If not empty, dissable the source-dest check (required for NAT instances)
+        ATTACH_VOLUMES      Volumes to attach in the form device:volumeId [device:volumeId], e.g. /dev/sdf:vol-1234567890abcdef0
 
     Bootstrap environment variables (optional):
         PRIVATE_KEY_FILE    Path to an SSH private key file to deploy to the server
@@ -309,6 +310,19 @@ command_run() {
 		wait_for_no_pending
 		for instance_id in $instance_ids ; do
 			PAGER= aws ec2 associate-address $additional_aws_options $global_aws_options --allocation-id "$ASSOCIATE_ADDRESS" --instance-id "$instance_id" --allow-reassociation > /dev/null
+			break
+		done
+	fi
+
+	# Volumes
+	if [ -n "${ATTACH_VOLUMES:-}" ]; then
+		wait_for_no_pending
+		for instance_id in $instance_ids ; do
+			for device_volume in "$ATTACH_VOLUMES" ; do
+				device=$(echo "$device_volume" | sed -e "s/:.*//")
+				volumeid=$(echo "$device_volume" | sed -e "s/.*://")
+				PAGER= aws ec2 attach-volume $additional_aws_options $global_aws_options --device "$device" --instance-id "$instance_id" --volume-id "$volumeid" > /dev/null
+			done
 			break
 		done
 	fi
