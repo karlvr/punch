@@ -18,7 +18,7 @@
 # limitations under the License.
 ###############################################################################
 
-PUNCH_LIB_DIR="$(dirname $0)/lib"
+PUNCH_LIB_DIR="$(dirname $0)/libexec"
 . "$PUNCH_LIB_DIR"/image.sh
 
 usage() {
