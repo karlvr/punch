@@ -870,7 +870,7 @@ command_console() {
 	for instance_id in $instance_ids ; do
 		start_verbose
 		aws ec2 get-console-output $additional_aws_options $global_aws_options \
-			--instance-id $instance_ids \
+			--instance-id $instance_id \
 			--output text
 		{ set +x; } 2>/dev/null
 	done
