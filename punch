@@ -349,9 +349,11 @@ command_run() {
 
 	# Ready script
 	if [ -n "${READY_SCRIPT:-}" ]; then
-		wait_for_port 22
-
-		eval "$READY_SCRIPT"
+		get_ips
+		for ip in $ips; do
+			wait_for_port "$ip" 22
+			eval "$READY_SCRIPT"
+		done
 	fi
 }
 
@@ -373,19 +375,36 @@ wait_for_no_pending() {
 }
 
 wait_for_port() {
-	port="$1"
-	get_ips
+	local host="$1"
+	local port="$2"
 	set +e
 
-	for ip in $ips; do
-		local success=
-		while [ -z "$success" ]; do
-			nc -z -G 5 "$ip" "$port" 2>/dev/null
-			if [ $? == 0 ]; then
-				success=1
+	local netcat_options="-z -G 5 -w 5"
+
+	if [ -z $quiet ]; then
+		echo -n "* Waiting for port $port to be available: $host" >&2
+	fi
+	local success=
+	local output=
+	while [ -z "$success" ]; do
+		output=$(nc $netcat_options "$host" "$port" 2>&1)
+		if [ $? == 0 ]; then
+			success=1
+		else
+			echo "$output" | grep "invalid option" >/dev/null
+			if [ $? == 0 -a "$netcat_options" == "-z -G 5 -w 5" ]; then
+				netcat_options="-z -w 5"
+			else
+				sleep 5
+				if [ -z $quiet ]; then
+					echo -n . >&2
+				fi
 			fi
-		done
+		fi
 	done
+	if [ -z $quiet ]; then
+		echo >&2
+	fi
 
 	set -e
 }
