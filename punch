@@ -28,6 +28,7 @@ usage: $0 [-f <config file>] [-d] <command>
     -d Dry run mode
     -q Quiet mode
 	-v Verbose mode
+	-y Yes to prompts
 
     Global environment variables (optional):
         PUNCH_PROFILE             The aws-cli profile to use (see aws configure)
@@ -124,6 +125,7 @@ global_aws_options=
 additional_aws_options=
 quiet=
 verbose=
+no_prompts=
 prefer_private_ips=
 
 findConfig() {
@@ -150,7 +152,7 @@ if [ ! -z "$config_file" ]; then
 	set +a
 fi
 
-while getopts ":f:dqvh" opt; do
+while getopts ":f:dqvyh" opt; do
 	case $opt in
 		f)
 			set -a # So all variables set are exported for our template engine
@@ -165,6 +167,9 @@ while getopts ":f:dqvh" opt; do
 			;;
 		v)
 			verbose=1
+			;;
+		y)
+			no_prompts=1
 			;;
 		h)
 			usage
@@ -728,6 +733,19 @@ get_instance_ids() {
 	fi
 }
 
+confirm_yes() {
+	local prompt="$1"
+
+	local answer=
+	while [ "x$answer" != "xy" -a "x$answer" != "xn" ]; do
+		read -e -p "$prompt (y/n) " answer
+	done
+	
+	if [ "x$answer" != "xy" ]; then
+		exit 0
+	fi
+}
+
 command_terminate() {
 	control_options "$@"
 	get_instance_id_args "$@"
@@ -743,6 +761,12 @@ command_terminate() {
 
 		add_configuration_filters
 		get_instance_ids
+
+		if [ -z "$no_prompts" ]; then
+			echo "Are you sure you want to TERMINATE the following instances?" >&2
+			echo "$instance_ids" >&2
+			confirm_yes "Terminate instances"
+		fi
 	fi
 
 	start_verbose
@@ -768,6 +792,12 @@ command_start() {
 
 		add_configuration_filters
 		get_instance_ids
+
+		if [ -z "$no_prompts" ]; then
+			echo "Are you sure you want to START the following instances?" >&2
+			echo "$instance_ids" >&2
+			confirm_yes "Start instances"
+		fi
 	fi
 
 	start_verbose
@@ -792,6 +822,12 @@ command_reboot() {
 
 		add_configuration_filters
 		get_instance_ids
+
+		if [ -z "$no_prompts" ]; then
+			echo "Are you sure you want to REBOOT the following instances?" >&2
+			echo "$instance_ids" >&2
+			confirm_yes "Reboot instances"
+		fi
 	fi
 
 	start_verbose
@@ -815,6 +851,12 @@ command_stop() {
 
 		add_configuration_filters
 		get_instance_ids
+
+		if [ -z "$no_prompts" ]; then
+			echo "Are you sure you want to STOP the following instances?" >&2
+			echo "$instance_ids" >&2
+			confirm_yes "Stop instances"
+		fi
 	fi
 
 	start_verbose
