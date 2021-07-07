@@ -84,6 +84,7 @@ Query commands:
         instances [<instance id or name> ...]
         ip [<instance id or name> ...]
         describe [<instance id or name> ...]
+		console [<instance id or name> ...]
 
     Query command options:
         -f <filters>        See aws ec2 run-instances help
@@ -835,6 +836,22 @@ command_describe() {
 	describe_instances 'Reservations[].Instances[]' 'table'
 }
 
+command_console() {
+	control_options "$@"
+	add_configuration_filters
+	get_instance_id_args "$@"
+
+	shift $((OPTIND-1))
+
+	for instance_id in $instance_ids ; do
+		start_verbose
+		aws ec2 get-console-output $additional_aws_options $global_aws_options \
+			--instance-id $instance_ids \
+			--output text
+		{ set +x; } 2>/dev/null
+	done
+}
+
 case $command in
 	run)
 		command_run "$@"
@@ -868,6 +885,9 @@ case $command in
 		;;
 	describe)
 		command_describe "$@"
+		;;
+	console)
+		command_console "$@"
 		;;
 	*)
 		echo "Unsupported command: $command" >&2
