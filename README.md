@@ -13,7 +13,7 @@ Punch requires the [AWS CLI](https://aws.amazon.com/cli/), so you must install t
 Punch uses environment variables for its configuration, and can load environment variables from a shell script. For example:
 
 ```
-PROFILE=my-profile punch instances
+PUNCH_PROFILE=my-profile punch instances
 ```
 
 or
@@ -31,22 +31,22 @@ up through parent directories.
 
 Here is an example configuration file `web-server-config.sh`. This contains all of the settings necessary to run an instance:
 ```
-PROFILE=my-profile
-REGION=us-west-1
+PUNCH_PROFILE=my-profile
+PUNCH_REGION=us-west-1
 
-AMI=ami-d8bdebb8
+PUNCH_AMI=ami-d8bdebb8
 # or
-IMAGE="ubuntu release=focal"
+PUNCH_IMAGE="ubuntu release=focal"
 
-SECURITY_GROUP=sg-55512345
-SUBNET=subnet-55512345
-ASSOCIATE_PUBLIC_IP_ADDRESS=1
-KEY_NAME=my-key-pair
-INSTANCE_TYPE=t2.micro
-#COUNT=1
+PUNCH_SECURITY_GROUP=sg-55512345
+PUNCH_SUBNET=subnet-55512345
+PUNCH_ASSOCIATE_PUBLIC_IP_ADDRESS=1
+PUNCH_KEY_NAME=my-key-pair
+PUNCH_INSTANCE_TYPE=t2.micro
+#PUNCH_COUNT=1
 ```
 
-All of this configuration is optional, depending upon your setup. `PROFILE` refers to a profile configured using `aws configure`.
+All of this configuration is optional, depending upon your setup. `PUNCH_PROFILE` refers to a profile configured using `aws configure`.
 
 Now we run punch to run three new instances:
 ```
@@ -59,10 +59,10 @@ Bootstrapping an instance involves running scripts on startup that setup the ins
 
 We add the following to the example configuration file `web-server-config.sh` above:
 ```
-BOOTSTRAP_PRIVATE_KEY_FILE=~/.ssh/id_automation
-BOOTSTRAP_GIT_URL=git@github.com:karlvr/bootstrap-scripts.git
-BOOTSTRAP_GIT_DIR=/opt/bootstrap
-BOOTSTRAP_SCRIPT='
+PUNCH_BOOTSTRAP_PRIVATE_KEY_FILE=~/.ssh/id_automation
+PUNCH_BOOTSTRAP_GIT_URL=git@github.com:karlvr/bootstrap-scripts.git
+PUNCH_BOOTSTRAP_GIT_DIR=/opt/bootstrap
+PUNCH_BOOTSTRAP_SCRIPT='
 /opt/bootstrap/stage1.sh
 /opt/bootstrap/stage2.sh
 '
@@ -77,15 +77,15 @@ Now we run punch again to run one new instance, this time running bootstrapping 
 punch -f web-server-config.sh run
 ```
 
-You can also replace the bootstrap template that punch uses by setting the `BOOTSTRAP_TEMPLATE` variable. See the default `bootstrap.sh` template for more information. Punch uses [mo](https://github.com/tests-always-included/mo) (a Moustache template engine written in Bash) to perform variable substitution in the bootstrap template.
+You can also replace the bootstrap template that punch uses by setting the `PUNCH_BOOTSTRAP_TEMPLATE` variable. See the default `bootstrap.sh` template for more information. Punch uses [mo](https://github.com/tests-always-included/mo) (a Moustache template engine written in Bash) to perform variable substitution in the bootstrap template.
 
 ### Setting tags on new instances
 
-Punch can set tags on your new instances using a `TAGS` environment variable, or using one or more tags specified as a command-line argument.
+Punch can set tags on your new instances using a `PUNCH_TAGS` environment variable, or using one or more tags specified as a command-line argument.
 
 To use the environment variable / configuration approach, add the following to the configuration file:
 ```
-TAGS="name1=value1 name2=value2"
+PUNCH_TAGS="name1=value1 name2=value2"
 ```
 
 To use the command-line arguments approach:
@@ -107,7 +107,7 @@ For convenience, punch can query your instances with some common filtering optio
 
 For a list of all of your instances (and their state) in the region:
 ```
-PROFILE=my-profile REGION=us-west-1 punch instances
+PUNCH_PROFILE=my-profile PUNCH_REGION=us-west-1 punch instances
 ```
 
 Punch uses environment variables, and configuration, to automatically build filters so it only queries (or controls) instances that match the configuration. Punch will filter match on the AMI image-id, the security group id, the subnet, the key-pair name, the instance type and any tags in the configuration. This helps to ensure that when you use a configuration file, you are only talking to the instances represented by it (as long as your configuration file options are unique; for that purpose use unique tagging).

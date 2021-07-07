@@ -30,15 +30,15 @@ usage: $0 [-f <config file>] [-d] <command>
 	-v Verbose mode
 
     Global environment variables (optional):
-        PROFILE             The aws-cli profile to use (see aws configure)
-        REGION              The AWS region to use
+        PUNCH_PROFILE             The aws-cli profile to use (see aws configure)
+        PUNCH_REGION              The AWS region to use
 
 Run command:
         run [-i <image-id>] [-c <count>] [-n <name>] [-t <key=value>] [-o <client token>]
 
     Run environment variables (required):
-        AMI                 The image-id for the new instance
-     or IMAGE               "<distro> <filters>"
+        PUNCH_AMI                 The image-id for the new instance
+     or PUNCH_IMAGE               "<distro> <filters>"
 
         The supported distros are:
           * ubuntu
@@ -54,31 +54,31 @@ Run command:
           * owner (defaults to official owner for the distro)
 
     Run environment variables (optional):
-        NAME                The EC2 instance name
-        INSTANCE_TYPE       The EC2 instance type
-        KEY_NAME            The name of the key-pair to associate with the new instance
-        SECURITY_GROUP      The VPC security group id
-        INSTANCE_PROFILE	The name of the IAM instance profile to attach
-        SUBNET              The VPC subnet id
-        PRIVATE_IP_ADDRESS  The private IP address to request
-        ASSOCIATE_PUBLIC_IP_ADDRESS If not empty, associate a public IP address with the new instance
-        ASSOCIATE_ADDRESS   The elastic IP allocation ID to associate the new instance with (if only one)
-        COUNT               The number of instances to create
-        TAGS                One or more tags to set on the new instances, e.g. name=value
-        ROOT_VOLUME_SIZE    The size of the root volume in GiB
-        READY_SCRIPT		Commands to be executed when the instance is ready
-        REMOVE_SSH_KNOWN_HOST The IP address to remove from $HOME/.ssh/known_hosts
-        NO_SOURCE_DEST_CHECK If not empty, dissable the source-dest check (required for NAT instances)
-        ATTACH_VOLUMES      Volumes to attach in the form device:volumeId [device:volumeId], e.g. /dev/sdf:vol-1234567890abcdef0
+        PUNCH_NAME                The EC2 instance name
+        PUNCH_INSTANCE_TYPE       The EC2 instance type
+        PUNCH_KEY_NAME            The name of the key-pair to associate with the new instance
+        PUNCH_SECURITY_GROUP      The VPC security group id
+        PUNCH_INSTANCE_PROFILE	  The name of the IAM instance profile to attach
+        PUNCH_SUBNET              The VPC subnet id
+        PUNCH_PRIVATE_IP_ADDRESS  The private IP address to request
+        PUNCH_ASSOCIATE_PUBLIC_IP_ADDRESS If not empty, associate a public IP address with the new instance
+        PUNCH_ASSOCIATE_ADDRESS   The elastic IP allocation ID to associate the new instance with (if only one)
+        PUNCH_COUNT               The number of instances to create
+        PUNCH_TAGS                One or more tags to set on the new instances, e.g. name=value
+        PUNCH_ROOT_VOLUME_SIZE    The size of the root volume in GiB
+        PUNCH_READY_SCRIPT		  Commands to be executed when the instance is ready
+        PUNCH_REMOVE_SSH_KNOWN_HOST The IP address to remove from $HOME/.ssh/known_hosts
+        PUNCH_NO_SOURCE_DEST_CHECK If not empty, dissable the source-dest check (required for NAT instances)
+        PUNCH_ATTACH_VOLUMES      Volumes to attach in the form device:volumeId [device:volumeId], e.g. /dev/sdf:vol-1234567890abcdef0
 
     Bootstrap environment variables (optional):
-        PRIVATE_KEY_FILE    Path to an SSH private key file to deploy to the server
-        BOOTSTRAP_GIT_URL   URL to a git repository to clone on the new instance
-        BOOTSTRAP_GIT_DIR   Path to clone the git repository to on the new instance
-        BOOTSTRAP_SCRIPT    Commands to be executed on the new instance while bootstrapping
+        PUNCH_PRIVATE_KEY_FILE    Path to an SSH private key file to deploy to the server
+        PUNCH_BOOTSTRAP_GIT_URL   URL to a git repository to clone on the new instance
+        PUNCH_BOOTSTRAP_GIT_DIR   Path to clone the git repository to on the new instance
+        PUNCH_BOOTSTRAP_SCRIPT    Commands to be executed on the new instance while bootstrapping
 
     Bootstrap environment variables (advanced):
-        BOOTSTRAP_TEMPLATE  Path to the template file to use for the bootstrap script
+        PUNCH_BOOTSTRAP_TEMPLATE  Path to the template file to use for the bootstrap script
 
 Query commands:
         instances [<instance id or name> ...]
@@ -112,8 +112,8 @@ Control commands:
         -p                  Prefer private IP addresses
 
     SSH environment variables (optional):
-        IDENTITY            Path to an SSH key file matching the instance's key-pair
-        USERNAME            The SSH username to connect with
+        PUNCH_IDENTITY            Path to an SSH key file matching the instance's key-pair
+        PUNCH_USERNAME            The SSH username to connect with
 EOF
 	exit 1
 }
@@ -182,11 +182,11 @@ announce() {
 	fi
 }
 
-if [ ! -z "${PROFILE:-}" ]; then
-	global_aws_options="$global_aws_options --profile $PROFILE"
+if [ ! -z "${PUNCH_PROFILE:-}" ]; then
+	global_aws_options="$global_aws_options --profile $PUNCH_PROFILE"
 fi
-if [ ! -z "${REGION:-}" ]; then
-	global_aws_options="$global_aws_options --region $REGION"
+if [ ! -z "${PUNCH_REGION:-}" ]; then
+	global_aws_options="$global_aws_options --region $PUNCH_REGION"
 fi
 
 command=${1:-}
@@ -223,81 +223,83 @@ command_run() {
 
 	shift $((OPTIND-1))
 
-	if [ -z "${AMI:-}" ]; then
-		if [ -n "${IMAGE:-}" ]; then
-			AMI=$(find_image_with_distro $IMAGE)
+	if [ -z "${PUNCH_AMI:-}" ]; then
+		if [ -n "${PUNCH_IMAGE:-}" ]; then
+			AMI=$(find_image_with_distro $PUNCH_IMAGE)
 		else
 			echo "AMI or IMAGE is required for run command, either via -i command-line option or AMI environment variable" >&2
 			exit 1
 		fi
 	fi
 
-	if [ ! -z "${TAGS:-}" ]; then
-		for tag in $TAGS; do
+	if [ ! -z "${PUNCH_TAGS:-}" ]; then
+		for tag in $PUNCH_TAGS; do
 			tag_key=$(echo "$tag" | cut -d = -f 1)
 			tag_value=$(echo "$tag" | cut -d = -f 2)
 			tags="${tags:-} Key=$tag_key,Value=$tag_value"
 		done
 	fi
-	if [ -n "${NAME:-}" ]; then
-		tags="${tags:-} Key=Name,Value=$NAME"
+	if [ -n "${PUNCH_NAME:-}" ]; then
+		tags="${tags:-} Key=Name,Value=$PUNCH_NAME"
 	fi
 
 	# Configuration
 	set -a # So all variables set are exported for our template engine
 
-	if [ -f "${BOOTSTRAP_PRIVATE_KEY_FILE:-}" ]; then
-		BOOTSTRAP_PRIVATE_KEY=$(cat "$BOOTSTRAP_PRIVATE_KEY_FILE")
+	if [ -f "${PUNCH_BOOTSTRAP_PRIVATE_KEY_FILE:-}" ]; then
+		BOOTSTRAP_PRIVATE_KEY=$(cat "$PUNCH_BOOTSTRAP_PRIVATE_KEY_FILE")
 	fi
 
-	if [[ "${BOOTSTRAP_GIT_URL:-}" =~ .*@.*:.* ]]; then
-		BOOTSTRAP_GIT_SSH_HOST=$(echo "$BOOTSTRAP_GIT_URL" | sed -e s/.*@// -e s/:.*//)
+	if [[ "${PUNCH_BOOTSTRAP_GIT_URL:-}" =~ .*@.*:.* ]]; then
+		BOOTSTRAP_GIT_SSH_HOST=$(echo "$PUNCH_BOOTSTRAP_GIT_URL" | sed -e s/.*@// -e s/:.*//)
 	fi
 
 	set +a
 
 	# https://github.com/tests-always-included/mo
 	MO="$PUNCH_LIB_DIR"/mo/mo
-	BOOTSTRAP_TEMPLATE=${BOOTSTRAP_TEMPLATE:-$(dirname $0)/share/bootstrap.sh}
+	local bootstrap_template
+	bootstrap_template=${PUNCH_BOOTSTRAP_TEMPLATE:-$(dirname $0)/share/bootstrap.sh}
 
-	BOOTSTRAP=$("$MO" "$BOOTSTRAP_TEMPLATE")
+	local bootstrap
+	bootstrap=$("$MO" "$bootstrap_template")
 
 	local run_options=
-	if [ ! -z "${KEY_NAME:-}" ]; then
-		run_options="$run_options --key-name $KEY_NAME"
+	if [ ! -z "${PUNCH_KEY_NAME:-}" ]; then
+		run_options="$run_options --key-name $PUNCH_KEY_NAME"
 	fi
-	if [ ! -z "${SUBNET:-}" ]; then
-		run_options="$run_options --subnet-id $SUBNET"
+	if [ ! -z "${PUNCH_SUBNET:-}" ]; then
+		run_options="$run_options --subnet-id $PUNCH_SUBNET"
 	fi
-	if [ -n "${PRIVATE_IP_ADDRESS:-}" ]; then
-		run_options="$run_options --private-ip-address $PRIVATE_IP_ADDRESS"
+	if [ -n "${PUNCH_PRIVATE_IP_ADDRESS:-}" ]; then
+		run_options="$run_options --private-ip-address $PUNCH_PRIVATE_IP_ADDRESS"
 	fi
-	if [ ! -z "${INSTANCE_TYPE:-}" ]; then
-		run_options="$run_options --instance-type $INSTANCE_TYPE"
+	if [ ! -z "${PUNCH_INSTANCE_TYPE:-}" ]; then
+		run_options="$run_options --instance-type $PUNCH_INSTANCE_TYPE"
 	fi
-	if [ ! -z "${SECURITY_GROUP:-}" ]; then
-		run_options="$run_options --security-group-ids $SECURITY_GROUP"
+	if [ ! -z "${PUNCH_SECURITY_GROUP:-}" ]; then
+		run_options="$run_options --security-group-ids $PUNCH_SECURITY_GROUP"
 	fi
-	if [ ! -z "${INSTANCE_PROFILE:-}" ]; then
-		run_options="$run_options --iam-instance-profile Name=\"$INSTANCE_PROFILE\""
+	if [ ! -z "${PUNCH_INSTANCE_PROFILE:-}" ]; then
+		run_options="$run_options --iam-instance-profile Name=\"$PUNCH_INSTANCE_PROFILE\""
 	fi
-	if [ ! -z "${ASSOCIATE_PUBLIC_IP_ADDRESS:-}" ]; then
+	if [ ! -z "${PUNCH_ASSOCIATE_PUBLIC_IP_ADDRESS:-}" ]; then
 		run_options="$run_options --associate-public-ip-address"
 	fi
 	if [ ! -z "${client_token:-}" ]; then
 		run_options="$run_options --client-token $client_token"
 	fi
-	if [ ! -z "${ROOT_VOLUME_SIZE:-}" ]; then
+	if [ ! -z "${PUNCH_ROOT_VOLUME_SIZE:-}" ]; then
 		start_verbose
-		local root_volume_device_name=$(aws ec2 describe-images $global_aws_options --image-ids "$AMI" --output text --query 'Images[].BlockDeviceMappings[0].DeviceName')
+		local root_volume_device_name=$(aws ec2 describe-images $global_aws_options --image-ids "$PUNCH_AMI" --output text --query 'Images[].BlockDeviceMappings[0].DeviceName')
 		{ set +x; } 2>/dev/null
 
-		run_options="$run_options --block-device-mappings DeviceName=$root_volume_device_name,Ebs={VolumeSize=$ROOT_VOLUME_SIZE}"
+		run_options="$run_options --block-device-mappings DeviceName=$root_volume_device_name,Ebs={VolumeSize=$PUNCH_ROOT_VOLUME_SIZE}"
 	fi
 
-	instance_ids=$(PAGER= aws ec2 run-instances $additional_aws_options $global_aws_options --image-id "$AMI" \
-		--count "${COUNT:-1}" $run_options \
-		--user-data "$BOOTSTRAP" \
+	instance_ids=$(PAGER= aws ec2 run-instances $additional_aws_options $global_aws_options --image-id "$PUNCH_AMI" \
+		--count "${PUNCH_COUNT:-1}" $run_options \
+		--user-data "$bootstrap" \
 		--query "Instances[].InstanceId" --output text)
 
 	echo $instance_ids
@@ -310,7 +312,7 @@ command_run() {
 	fi
 
 	# source-dest check
-	if [ -n "${NO_SOURCE_DEST_CHECK:-}" ]; then
+	if [ -n "${PUNCH_NO_SOURCE_DEST_CHECK:-}" ]; then
 		for instance_id in $instance_ids ; do
 			start_verbose
 			PAGER= aws ec2 modify-instance-attribute $additional_aws_options $global_aws_options --instance-id $instance_id --no-source-dest-check
@@ -319,21 +321,21 @@ command_run() {
 	fi
 
 	# Associate IPs
-	if [ -n "${ASSOCIATE_ADDRESS:-}" ]; then
+	if [ -n "${PUNCH_ASSOCIATE_ADDRESS:-}" ]; then
 		wait_for_no_pending
 		for instance_id in $instance_ids ; do
 			start_verbose
-			PAGER= aws ec2 associate-address $additional_aws_options $global_aws_options --allocation-id "$ASSOCIATE_ADDRESS" --instance-id "$instance_id" --allow-reassociation > /dev/null
+			PAGER= aws ec2 associate-address $additional_aws_options $global_aws_options --allocation-id "$PUNCH_ASSOCIATE_ADDRESS" --instance-id "$instance_id" --allow-reassociation > /dev/null
 			{ set +x; } 2>/dev/null
 			break
 		done
 	fi
 
 	# Volumes
-	if [ -n "${ATTACH_VOLUMES:-}" ]; then
+	if [ -n "${PUNCH_ATTACH_VOLUMES:-}" ]; then
 		wait_for_no_pending
 		for instance_id in $instance_ids ; do
-			for device_volume in "$ATTACH_VOLUMES" ; do
+			for device_volume in "$PUNCH_ATTACH_VOLUMES" ; do
 				device=$(echo "$device_volume" | sed -e "s/:.*//")
 				volumeid=$(echo "$device_volume" | sed -e "s/.*://")
 				start_verbose
@@ -344,16 +346,16 @@ command_run() {
 		done
 	fi
 
-	if [ -n "${REMOVE_SSH_KNOWN_HOST:-}" ]; then
-		sed -i '' -e "/$REMOVE_SSH_KNOWN_HOST/d" "$HOME/.ssh/known_hosts"
+	if [ -n "${PUNCH_REMOVE_SSH_KNOWN_HOST:-}" ]; then
+		sed -i '' -e "/$PUNCH_REMOVE_SSH_KNOWN_HOST/d" "$HOME/.ssh/known_hosts"
 	fi
 
 	# Ready script
-	if [ -n "${READY_SCRIPT:-}" ]; then
+	if [ -n "${PUNCH_READY_SCRIPT:-}" ]; then
 		get_ips
 		for ip in $ips; do
 			wait_for_port "$ip" 22
-			eval "$READY_SCRIPT"
+			eval "$PUNCH_READY_SCRIPT"
 		done
 	fi
 }
@@ -465,28 +467,28 @@ control_options() {
 }
 
 add_configuration_filters() {
-	if [ ! -z "${AMI:-}" ]; then
-		filters="${filters:-} Name=image-id,Values=$AMI"
+	if [ ! -z "${PUNCH_AMI:-}" ]; then
+		filters="${filters:-} Name=image-id,Values=$PUNCH_AMI"
 	fi
-	if [ ! -z "${SECURITY_GROUP:-}" ]; then
-		filters="${filters:-} Name=instance.group-id,Values=$SECURITY_GROUP"
+	if [ ! -z "${PUNCH_SECURITY_GROUP:-}" ]; then
+		filters="${filters:-} Name=instance.group-id,Values=$PUNCH_SECURITY_GROUP"
 	fi
-	if [ ! -z "${SUBNET:-}" ]; then
-		filters="${filters:-} Name=network-interface.subnet-id,Values=$SUBNET"
+	if [ ! -z "${PUNCH_SUBNET:-}" ]; then
+		filters="${filters:-} Name=network-interface.subnet-id,Values=$PUNCH_SUBNET"
 	fi
-	if [ ! -z "${KEY_NAME:-}" ]; then
-		filters="${filters:-} Name=key-name,Values=$KEY_NAME"
+	if [ ! -z "${PUNCH_KEY_NAME:-}" ]; then
+		filters="${filters:-} Name=key-name,Values=$PUNCH_KEY_NAME"
 	fi
-	if [ ! -z "${INSTANCE_TYPE:-}" ]; then
-		filters="${filters:-} Name=instance-type,Values=$INSTANCE_TYPE"
+	if [ ! -z "${PUNCH_INSTANCE_TYPE:-}" ]; then
+		filters="${filters:-} Name=instance-type,Values=$PUNCH_INSTANCE_TYPE"
 	fi
-	if [ ! -z "${TAGS:-}" ]; then
-		for tag in $TAGS; do
+	if [ ! -z "${PUNCH_TAGS:-}" ]; then
+		for tag in $PUNCH_TAGS; do
 			add_tag_filter "$tag"
 		done
 	fi
-	if [ ! -z "${NAME:-}" ]; then
-		add_tag_filter "Name=$NAME"
+	if [ ! -z "${PUNCH_NAME:-}" ]; then
+		add_tag_filter "Name=$PUNCH_NAME"
 	fi
 }
 
@@ -598,11 +600,11 @@ command_ssh() {
 	get_ips
 
 	ssh_options=-t
-	if [ ! -z "${IDENTITY:-}" ]; then
-		ssh_options="$ssh_options -i $IDENTITY"
+	if [ ! -z "${PUNCH_IDENTITY:-}" ]; then
+		ssh_options="$ssh_options -i $PUNCH_IDENTITY"
 	fi
-	if [ ! -z "${USERNAME:-}" ]; then
-		ssh_options="$ssh_options -l $USERNAME"
+	if [ ! -z "${PUNCH_USERNAME:-}" ]; then
+		ssh_options="$ssh_options -l $PUNCH_USERNAME"
 	fi
 	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
@@ -622,8 +624,8 @@ command_scp() {
 	filters="${filters:-} Name=instance-state-name,Values=running,pending"
 
 	ssh_options=
-	if [ ! -z "${IDENTITY:-}" ]; then
-		ssh_options="$ssh_options -i $IDENTITY"
+	if [ ! -z "${PUNCH_IDENTITY:-}" ]; then
+		ssh_options="$ssh_options -i $PUNCH_IDENTITY"
 	fi
 	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
@@ -650,8 +652,8 @@ command_scp() {
 		get_ips
 		source_prefix="$ips:"
 
-		if [ ! -z "${USERNAME:-}" ]; then
-			source_prefix="$USERNAME@$source_prefix"
+		if [ ! -z "${PUNCH_USERNAME:-}" ]; then
+			source_prefix="$PUNCH_USERNAME@$source_prefix"
 		fi
 	fi
 	if [[ "$dest" =~ ^([^:]*):(.*)$ ]]; then
@@ -676,8 +678,8 @@ command_scp() {
 
 	local dest_prefix=
 	if [ -z "$source_prefix" ]; then
-		if [ ! -z "${USERNAME:-}" ]; then
-			dest_prefix="$USERNAME@"
+		if [ ! -z "${PUNCH_USERNAME:-}" ]; then
+			dest_prefix="$PUNCH_USERNAME@"
 		fi
 
 		for ip in $ips ; do
@@ -704,11 +706,11 @@ command_csshX() {
 
 	csshX_options=
 	ssh_options=
-	if [ ! -z "${IDENTITY:-}" ]; then
-		ssh_options="$ssh_options -i $IDENTITY"
+	if [ ! -z "${PUNCH_IDENTITY:-}" ]; then
+		ssh_options="$ssh_options -i $PUNCH_IDENTITY"
 	fi
-	if [ ! -z "${USERNAME:-}" ]; then
-		csshX_options="$csshX_options --login $USERNAME"
+	if [ ! -z "${PUNCH_USERNAME:-}" ]; then
+		csshX_options="$csshX_options --login $PUNCH_USERNAME"
 	fi
 	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -q"
 
