@@ -102,6 +102,7 @@ Control commands:
         csshX [<instance> ...]        Requires csshX to be installed
         terminate [<instance> ...]
         start [<instance> ...]
+        reboot [<instance> ...]
         stop [<instance> ...]
 		wait [<instance> ...] Wait for instances to have a settled state
 
@@ -776,6 +777,29 @@ command_start() {
 	{ set +x; } 2>/dev/null
 }
 
+command_reboot() {
+	control_options "$@"
+	get_instance_id_args "$@"
+
+	shift $((OPTIND-1))
+
+	if [ -z "${instance_ids:-}" ]; then
+		# No instance_ids specified, so we query for them
+		if [ -z "${filters:-}" ]; then
+			# Default to skip instances that aren't stopped
+			filters="${filters:-} Name=instance-state-name,Values=stopping,stopped"
+		fi
+
+		add_configuration_filters
+		get_instance_ids
+	fi
+
+	start_verbose
+	aws ec2 reboot-instances $additional_aws_options $global_aws_options \
+		--instance-ids $instance_ids
+	{ set +x; } 2>/dev/null
+}
+
 command_stop() {
 	control_options "$@"
 	get_instance_id_args "$@"
@@ -870,6 +894,9 @@ case $command in
 		;;
 	start)
 		command_start "$@"
+		;;
+	reboot)
+		command_reboot "$@"
 		;;
 	stop)
 		command_stop "$@"
