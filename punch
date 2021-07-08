@@ -883,7 +883,7 @@ command_instances() {
 
 	shift $((OPTIND-1))
 
-	result=$(describe_instances 'Reservations[].Instances[].[InstanceId,PublicIpAddress,PrivateIpAddress,State.Name,Tags[?Key==`Name`]|[0].Value]')
+	result=$(describe_instances 'Reservations[].Instances[].[Tags[?Key==`Name`]|[0].Value,InstanceId,PublicIpAddress,PrivateIpAddress,InstanceType,LaunchTime,State.Name]' table)
 
 	if [ -z "$result" ]; then
 		announce "No matching instances"
