@@ -889,7 +889,8 @@ command_instances() {
 		announce "No matching instances"
 		exit 0
 	fi
-	echo "$result"
+
+	echo "$result" | sed -e '1,2d'
 }
 
 command_describe() {
