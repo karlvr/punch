@@ -83,6 +83,7 @@ Run command:
 
 Query commands:
         instances [<instance id or name> ...]
+        id [<instance id or name> ...]
         ip [<instance id or name> ...]
         describe [<instance id or name> ...]
 		console [<instance id or name> ...]
@@ -876,6 +877,23 @@ command_ip() {
 	echo $ips
 }
 
+command_id() {
+	control_options "$@"
+	add_configuration_filters
+	get_instance_id_args "$@"
+
+	shift $((OPTIND-1))
+
+	result=$(describe_instances 'Reservations[].Instances[].[InstanceId]')
+
+	if [ -z "$result" ]; then
+		announce "No matching instances"
+		exit 0
+	fi
+
+	echo "$result"
+}
+
 command_instances() {
 	control_options "$@"
 	add_configuration_filters
@@ -946,6 +964,9 @@ case $command in
 		;;
 	ip|ips)
 		command_ip "$@"
+		;;
+	id|ids)
+		command_id "$@"
 		;;
 	instances)
 		command_instances "$@"
