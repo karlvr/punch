@@ -86,7 +86,7 @@ Query commands:
         id [<instance id or name> ...]
         ip [<instance id or name> ...]
         describe [<instance id or name> ...]
-		console [<instance id or name> ...]
+        console [<instance id or name> ...]
 
     Query command options:
         -f <filters>        See aws ec2 run-instances help
