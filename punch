@@ -402,6 +402,7 @@ command_run() {
 		get_ips
 		for ip in $ips; do
 			wait_for_port "$ip" 22
+			PUNCH_IP="$ip"
 			eval "$PUNCH_READY_SCRIPT"
 		done
 	fi
