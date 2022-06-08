@@ -71,6 +71,8 @@ Run command:
         PUNCH_REMOVE_SSH_KNOWN_HOST The IP address to remove from $HOME/.ssh/known_hosts
         PUNCH_NO_SOURCE_DEST_CHECK If not empty, dissable the source-dest check (required for NAT instances)
         PUNCH_ATTACH_VOLUMES      Volumes to attach in the form device:volumeId [device:volumeId], e.g. /dev/sdf:vol-1234567890abcdef0
+        PUNCH_CREATE_VOLUME       Create and attach a volume in the form "device:--encrypted --size 100 --volume-type gp2"
+                                  You can use any flags accepted by aws ec2 create-volume to configure the volume.
 
     Bootstrap environment variables (optional):
         PUNCH_PRIVATE_KEY_FILE    Path to an SSH private key file to deploy to the server
@@ -303,6 +305,43 @@ command_run() {
 		{ set +x; } 2>/dev/null
 
 		run_options="$run_options --block-device-mappings DeviceName=$root_volume_device_name,Ebs={VolumeSize=$PUNCH_ROOT_VOLUME_SIZE}"
+	fi
+
+	# Create volumes
+	if [ -n "${PUNCH_CREATE_VOLUME:-}" ]; then
+		if [ -n "${PUNCH_SUBNET:-}" ]; then
+			start_verbose
+			local availability_zone=$(aws ec2 describe-subnets $additional_aws_options $global_aws_options --subnet-ids "${PUNCH_SUBNET}" --query 'Subnets[0].AvailabilityZone' --output text)
+			{ set +x; } 2>/dev/null
+		else
+			announce "Cannot create a volume without a specific subnet"
+			exit 1
+		fi
+
+		device=$(echo "$PUNCH_CREATE_VOLUME" | sed -e "s/:.*//")
+		volumespec=$(echo "$PUNCH_CREATE_VOLUME" | sed -e "s/.*://")
+		start_verbose
+		local volumeid=$(aws ec2 create-volume $additional_aws_options $global_aws_options --availability-zone "$availability_zone" ${volumespec} --output text --query VolumeId)
+		{ set +x; } 2>/dev/null
+
+		if [ -z "$volumeid" ]; then
+			announce "Failed to create volume"
+			exit 1
+		fi
+
+		local volumestatus=creating
+		while [ "$volumestatus" == "creating" ]; do
+			start_verbose
+			volumestatus=$(aws ec2 describe-volume-status $additional_aws_options $global_aws_options --volume-id "$volumeid" --output text --query 'VolumeStatuses[0].VolumeStatus.Status')
+			{ set +x; } 2>/dev/null
+		done
+
+		if [ "$volumestatus" != "ok" ]; then
+			announce "Failed to create volume: status=$volumestatus"
+			exit 1
+		fi
+
+		PUNCH_ATTACH_VOLUMES="${PUNCH_ATTACH_VOLUMES:-} $device:$volumeid"
 	fi
 
 	instance_ids=$(PAGER= aws ec2 run-instances $additional_aws_options $global_aws_options --image-id "$PUNCH_AMI" \
