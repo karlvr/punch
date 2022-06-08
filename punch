@@ -233,7 +233,7 @@ command_run() {
 
 	if [ -z "${PUNCH_AMI:-}" ]; then
 		if [ -n "${PUNCH_IMAGE:-}" ]; then
-			AMI=$(find_image_with_distro $PUNCH_IMAGE)
+			PUNCH_AMI=$(find_image_with_distro $PUNCH_IMAGE)
 		else
 			echo "PUNCH_AMI or PUNCH_IMAGE is required for run command, either via -i command-line option or PUNCH_AMI environment variable" >&2
 			exit 1
