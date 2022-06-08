@@ -343,7 +343,7 @@ command_run() {
 	if [ -n "${PUNCH_ATTACH_VOLUMES:-}" ]; then
 		wait_for_no_pending
 		for instance_id in $instance_ids ; do
-			for device_volume in "$PUNCH_ATTACH_VOLUMES" ; do
+			for device_volume in $PUNCH_ATTACH_VOLUMES ; do
 				device=$(echo "$device_volume" | sed -e "s/:.*//")
 				volumeid=$(echo "$device_volume" | sed -e "s/.*://")
 				start_verbose
