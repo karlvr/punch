@@ -678,10 +678,8 @@ command_scp() {
 	fi
 	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
-	source=$(echo $* | awk {'print $1'})
-	dest=$(echo $* | awk {'print $2'})
-
-	if [ -z "$source" -o -z "$dest" ]; then
+	source="$1"
+	if [ -z "$source" ]; then
 		usage
 	fi
 
@@ -704,40 +702,57 @@ command_scp() {
 		if [ ! -z "${PUNCH_USERNAME:-}" ]; then
 			source_prefix="$PUNCH_USERNAME@$source_prefix"
 		fi
-	fi
-	if [[ "$dest" =~ ^([^:]*):(.*)$ ]]; then
-		local dest_instance=${BASH_REMATCH[1]}
-		dest=${BASH_REMATCH[2]}
 
-		# If dest_instance is empty then it means all matching servers, so we fall through
-		if [ -n "$dest_instance" ]; then
-			clear_instances
-			add_instance "$dest_instance"
-			get_ips
-		elif [ -n "$source_prefix" ]; then
-			echo "scp: dest cannot be empty if source is not local" >&2
-			exit 1
-		else
-			get_ips
+		dest="${2:-}"
+		if [ -z "$dest" ]; then
+			usage
 		fi
-	elif [ -z "$source_prefix" ]; then
-		echo "scp: either source or dest must be remote" >&2
-		exit 1
-	fi
-
-	local dest_prefix=
-	if [ -z "$source_prefix" ]; then
-		if [ ! -z "${PUNCH_USERNAME:-}" ]; then
-			dest_prefix="$PUNCH_USERNAME@"
-		fi
-
-		for ip in $ips ; do
-			announce "*** scp $source $dest_prefix$ip:$dest"
-			/usr/bin/scp $ssh_options -r "$source" "$dest_prefix$ip:$dest"
-		done
-	else
+		
 		announce "*** scp $source_prefix$source $dest_prefix$dest"
-		/usr/bin/scp $ssh_options -r "$source_prefix$source" "$dest_prefix$dest"
+		/usr/bin/scp $ssh_options -r "$source_prefix$source" "$dest"
+	else
+		sources=("$source")
+		shift 1
+		next="${1:-}"
+		shift 1
+		nextnext="${1:-}"
+		while [ -n "$nextnext" ]; do
+			sources+=("$next")
+			next="$nextnext"
+			shift 1
+			nextnext="${1:-}"
+		done
+		dest="$next"
+
+		if [[ "$dest" =~ ^([^:]*):(.*)$ ]]; then
+			local dest_instance=${BASH_REMATCH[1]}
+			dest=${BASH_REMATCH[2]}
+
+			# If dest_instance is empty then it means all matching servers, so we fall through
+			if [ -n "$dest_instance" ]; then
+				clear_instances
+				add_instance "$dest_instance"
+				get_ips
+			elif [ -n "$source_prefix" ]; then
+				echo "scp: dest cannot be empty if source is not local" >&2
+				exit 1
+			else
+				get_ips
+			fi
+
+			local dest_prefix=
+			if [ ! -z "${PUNCH_USERNAME:-}" ]; then
+				dest_prefix="$PUNCH_USERNAME@"
+			fi
+
+			for ip in $ips ; do
+				announce "*** scp ${sources[@]} $dest_prefix$ip:$dest"
+				/usr/bin/scp $ssh_options -r ${sources[@]} "$dest_prefix$ip:$dest"
+			done
+		elif [ -z "$source_prefix" ]; then
+			echo "scp: either source or dest must be remote" >&2
+			exit 1
+		fi
 	fi
 }
 
