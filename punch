@@ -708,7 +708,7 @@ command_scp() {
 			usage
 		fi
 		
-		announce "*** scp $source_prefix$source $dest_prefix$dest"
+		announce "*** scp -r $source_prefix$source $dest_prefix$dest"
 		/usr/bin/scp $ssh_options -r "$source_prefix$source" "$dest"
 	else
 		sources=("$source")
@@ -746,7 +746,7 @@ command_scp() {
 			fi
 
 			for ip in $ips ; do
-				announce "*** scp ${sources[@]} $dest_prefix$ip:$dest"
+				announce "*** scp -r ${sources[@]} $dest_prefix$ip:$dest"
 				/usr/bin/scp $ssh_options -r ${sources[@]} "$dest_prefix$ip:$dest"
 			done
 		elif [ -z "$source_prefix" ]; then
