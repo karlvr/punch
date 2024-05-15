@@ -500,7 +500,7 @@ control_options() {
 				filters="${filters:-} Name=client-token,Values=$OPTARG"
 				;;
 			u)
-				USERNAME="$OPTARG"
+				PUNCH_USERNAME="$OPTARG"
 				;;
 			c)
 				ssh_command="$OPTARG"
