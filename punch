@@ -678,7 +678,7 @@ command_scp() {
 	fi
 	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
-	source="$1"
+	source="${1:-}"
 	if [ -z "$source" ]; then
 		usage
 	fi
@@ -708,7 +708,7 @@ command_scp() {
 			usage
 		fi
 		
-		announce "*** scp -r $source_prefix$source $dest_prefix$dest"
+		announce "*** scp -r $source_prefix$source $dest"
 		/usr/bin/scp $ssh_options -r "$source_prefix$source" "$dest"
 	else
 		sources=("$source")
