@@ -69,7 +69,7 @@ Run command:
         PUNCH_ROOT_VOLUME_SIZE    The size of the root volume in GiB
         PUNCH_READY_SCRIPT		  Commands to be executed when the instance is ready
         PUNCH_REMOVE_SSH_KNOWN_HOST The IP address to remove from $HOME/.ssh/known_hosts
-        PUNCH_NO_SOURCE_DEST_CHECK If not empty, dissable the source-dest check (required for NAT instances)
+        PUNCH_NO_SOURCE_DEST_CHECK If not empty, disable the source-dest check (required for NAT instances)
         PUNCH_ATTACH_VOLUMES      Volumes to attach in the form device:volumeId [device:volumeId], e.g. /dev/sdf:vol-1234567890abcdef0
         PUNCH_CREATE_VOLUME       Create and attach a volume in the form "device:--encrypted --size 100 --volume-type gp2"
                                   You can use any flags accepted by aws ec2 create-volume to configure the volume.
