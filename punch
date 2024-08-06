@@ -427,36 +427,36 @@ wait_for_no_pending() {
 }
 
 wait_for_port() {
+	# Test that ssh is currently available for our user
 	local host="$1"
 	local port="$2"
-	set +e
 
-	local netcat_options="-z -G 5 -w 5"
+	local delay=5
+
+	ssh_options=-t
+	if [ ! -z "${PUNCH_IDENTITY:-}" ]; then
+		ssh_options="$ssh_options -i $PUNCH_IDENTITY"
+	fi
+	if [ ! -z "${PUNCH_USERNAME:-}" ]; then
+		ssh_options="$ssh_options -l $PUNCH_USERNAME"
+	fi
+	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
 	if [ -z $quiet ]; then
 		echo -n "* Waiting for port $port to be available: $host" >&2
 	fi
-	local success=
-	local output=
-	while [ -z "$success" ]; do
-		output=$(nc $netcat_options "$host" "$port" 2>&1)
-		if [ $? == 0 ]; then
-			success=1
-		else
-			echo "$output" | grep "invalid option" >/dev/null
-			if [ $? == 0 -a "$netcat_options" == "-z -G 5 -w 5" ]; then
-				netcat_options="-z -w 5"
-			else
-				sleep 5
-				if [ -z $quiet ]; then
-					echo -n . >&2
-				fi
-			fi
+
+	set +e
+	ssh -T $ssh_options -p $port $host true
+
+	while [ $? != 0 ]; do
+		if [ -z $quiet ]; then
+			echo -n . >&2
 		fi
+		sleep $delay
+
+		ssh -T $ssh_options -p $port $host true
 	done
-	if [ -z $quiet ]; then
-		echo >&2
-	fi
 
 	set -e
 }
