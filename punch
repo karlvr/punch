@@ -858,7 +858,7 @@ command_start() {
 	fi
 
 	start_verbose
-	aws ec2 start-instances $additional_aws_options $global_aws_options \
+	PAGER= aws ec2 start-instances $additional_aws_options $global_aws_options \
 		--instance-ids $instance_ids \
 		--query StartingInstances[].InstanceId --output text
 	{ set +x; } 2>/dev/null
@@ -888,7 +888,7 @@ command_reboot() {
 	fi
 
 	start_verbose
-	aws ec2 reboot-instances $additional_aws_options $global_aws_options \
+	PAGER= aws ec2 reboot-instances $additional_aws_options $global_aws_options \
 		--instance-ids $instance_ids
 	{ set +x; } 2>/dev/null
 }
@@ -917,7 +917,7 @@ command_stop() {
 	fi
 
 	start_verbose
-	aws ec2 stop-instances $additional_aws_options $global_aws_options \
+	PAGER= aws ec2 stop-instances $additional_aws_options $global_aws_options \
 		--instance-ids $instance_ids \
 		--query StoppingInstances[].InstanceId --output text
 	{ set +x; } 2>/dev/null
