@@ -228,6 +228,7 @@ command_run() {
 				;;
 			\?)
 				echo "Invalid option: -$OPTARG" >&2
+				exit 1
 				;;
 		esac
 	done
@@ -510,6 +511,7 @@ control_options() {
 				;;
 			\?)
 				echo "Invalid command option: -$OPTARG" >&2
+				exit 1
 				;;
 		esac
 	done
@@ -623,6 +625,7 @@ ssh_options() {
 				;;
 			\?)
 				echo "Invalid ssh option: -$OPTARG" >&2
+				exit 1
 				;;
 		esac
 	done
@@ -631,6 +634,7 @@ ssh_options() {
 warn_leftovers() {
 	if [ -n "$*" ]; then
 		echo "Invalid extra arguments: $*" >&2
+		exit 1
 	fi
 }
 
