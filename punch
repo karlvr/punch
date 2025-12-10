@@ -46,6 +46,7 @@ Run command:
 
         After the distro name you MAY include filters:
           * release (e.g. focal)
+          * flavor (e.g. minimal)
           * architecture (default: x86_64)
           * root_device_type (default: ebs)
           * image_type (default: machine)

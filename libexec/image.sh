@@ -7,6 +7,7 @@ find_image() {
 	local virtualization_type=hvm
 	local volume_type=
 	local release=
+	local name_suffix=
 
 	local option
 	for option in $* ; do
@@ -31,6 +32,8 @@ find_image() {
 			volume_type="$option_value"
 		elif [ "$option_key" == "release" ]; then
 			release="$option_value"
+		elif [ "$option_key" == "flavor" ]; then
+			name_suffix="-$option_value"
 		else
 			echo "Unsupported image filter option: $option" >&2
 			return 0
@@ -58,7 +61,9 @@ find_image() {
 		filters="$filters Name=block-device-mapping.volume-type,Values=$volume_type"
 	fi
 	if [ -n "$release" ]; then
-		filters="$filters Name=name,Values=ubuntu/images/*$release*"
+		filters="$filters Name=name,Values=ubuntu$name_suffix/images/*$release*"
+	elif [ -n "$name_suffix" ]; then
+		filters="$filters Name=name,Values=ubuntu$name_suffix/images/*"
 	fi
 
 	# Find AMI
