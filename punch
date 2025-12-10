@@ -60,6 +60,7 @@ Run command:
         PUNCH_KEY_NAME            The name of the key-pair to associate with the new instance
         PUNCH_SECURITY_GROUP      The VPC security group id
         PUNCH_INSTANCE_PROFILE	  The name of the IAM instance profile to attach
+        PUNCH_VPC                 The VPC id to choose a random subnet from (only required if PUNCH_SUBNET is not specified)
         PUNCH_SUBNET              The VPC subnet id
         PUNCH_PRIVATE_IP_ADDRESS  The private IP address to request
         PUNCH_ASSOCIATE_PUBLIC_IP_ADDRESS If not empty, associate a public IP address with the new instance
@@ -275,6 +276,13 @@ command_run() {
 
 	local bootstrap
 	bootstrap=$("$MO" "$bootstrap_template")
+
+	if [ -n "${PUNCH_VPC:-}" -a -z "${PUNCH_SUBNET:-}" ]; then
+		start_verbose
+		PUNCH_SUBNET=$(aws ec2 describe-subnets $global_aws_options --filters "Name=vpc-id,Values=${PUNCH_VPC}" --output text --query 'Subnets[].SubnetId' | xargs printf "%s\n" | sort -R | head -n 1)
+		{ set +x; } 2>/dev/null
+		announce "Chosen $PUNCH_SUBNET in $PUNCH_VPC"
+	fi
 
 	local run_options=
 	if [ -n "${PUNCH_KEY_NAME:-}" ]; then
