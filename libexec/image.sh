@@ -39,25 +39,25 @@ find_image() {
 
 	local filters=
 
-	if [ ! -z "$architecture" ]; then
+	if [ -n "$architecture" ]; then
 		filters="$filters Name=architecture,Values=$architecture"
 	fi
-	if [ ! -z "$root_device_type" ]; then
+	if [ -n "$root_device_type" ]; then
 		filters="$filters Name=root-device-type,Values=$root_device_type"
 	fi
-	if [ ! -z "$image_type" ]; then
+	if [ -n "$image_type" ]; then
 		filters="$filters Name=image-type,Values=$image_type"
 	fi
-	if [ ! -z "$hypervisor" ]; then
+	if [ -n "$hypervisor" ]; then
 		filters="$filters Name=hypervisor,Values=$hypervisor"
 	fi
-	if [ ! -z "$virtualization_type" ]; then
+	if [ -n "$virtualization_type" ]; then
 		filters="$filters Name=virtualization-type,Values=$virtualization_type"
 	fi
-	if [ ! -z "$volume_type" ]; then
+	if [ -n "$volume_type" ]; then
 		filters="$filters Name=block-device-mapping.volume-type,Values=$volume_type"
 	fi
-	if [ ! -z "$release" ]; then
+	if [ -n "$release" ]; then
 		filters="$filters Name=name,Values=ubuntu/images/*$release*"
 	fi
 

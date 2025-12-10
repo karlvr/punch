@@ -143,7 +143,7 @@ findConfig() {
 }
 
 config_file=$(findConfig)
-if [ ! -z "$config_file" ]; then
+if [ -n "$config_file" ]; then
 	set +e
 	set -a # So all variables are exported, for the ones we pass to other commands like mo
 	source "$config_file"
@@ -193,10 +193,10 @@ announce() {
 	fi
 }
 
-if [ ! -z "${PUNCH_PROFILE:-}" ]; then
+if [ -n "${PUNCH_PROFILE:-}" ]; then
 	global_aws_options="$global_aws_options --profile $PUNCH_PROFILE"
 fi
-if [ ! -z "${PUNCH_REGION:-}" ]; then
+if [ -n "${PUNCH_REGION:-}" ]; then
 	global_aws_options="$global_aws_options --region $PUNCH_REGION"
 fi
 
@@ -243,7 +243,7 @@ command_run() {
 		fi
 	fi
 
-	if [ ! -z "${PUNCH_TAGS:-}" ]; then
+	if [ -n "${PUNCH_TAGS:-}" ]; then
 		for tag in $PUNCH_TAGS; do
 			tag_key=$(echo "$tag" | cut -d = -f 1)
 			tag_value=$(echo "$tag" | cut -d = -f 2)
@@ -276,31 +276,31 @@ command_run() {
 	bootstrap=$("$MO" "$bootstrap_template")
 
 	local run_options=
-	if [ ! -z "${PUNCH_KEY_NAME:-}" ]; then
+	if [ -n "${PUNCH_KEY_NAME:-}" ]; then
 		run_options="$run_options --key-name $PUNCH_KEY_NAME"
 	fi
-	if [ ! -z "${PUNCH_SUBNET:-}" ]; then
+	if [ -n "${PUNCH_SUBNET:-}" ]; then
 		run_options="$run_options --subnet-id $PUNCH_SUBNET"
 	fi
 	if [ -n "${PUNCH_PRIVATE_IP_ADDRESS:-}" ]; then
 		run_options="$run_options --private-ip-address $PUNCH_PRIVATE_IP_ADDRESS"
 	fi
-	if [ ! -z "${PUNCH_INSTANCE_TYPE:-}" ]; then
+	if [ -n "${PUNCH_INSTANCE_TYPE:-}" ]; then
 		run_options="$run_options --instance-type $PUNCH_INSTANCE_TYPE"
 	fi
-	if [ ! -z "${PUNCH_SECURITY_GROUP:-}" ]; then
+	if [ -n "${PUNCH_SECURITY_GROUP:-}" ]; then
 		run_options="$run_options --security-group-ids $PUNCH_SECURITY_GROUP"
 	fi
-	if [ ! -z "${PUNCH_INSTANCE_PROFILE:-}" ]; then
+	if [ -n "${PUNCH_INSTANCE_PROFILE:-}" ]; then
 		run_options="$run_options --iam-instance-profile Name=\"$PUNCH_INSTANCE_PROFILE\""
 	fi
-	if [ ! -z "${PUNCH_ASSOCIATE_PUBLIC_IP_ADDRESS:-}" ]; then
+	if [ -n "${PUNCH_ASSOCIATE_PUBLIC_IP_ADDRESS:-}" ]; then
 		run_options="$run_options --associate-public-ip-address"
 	fi
-	if [ ! -z "${client_token:-}" ]; then
+	if [ -n "${client_token:-}" ]; then
 		run_options="$run_options --client-token $client_token"
 	fi
-	if [ ! -z "${PUNCH_ROOT_VOLUME_SIZE:-}" ]; then
+	if [ -n "${PUNCH_ROOT_VOLUME_SIZE:-}" ]; then
 		start_verbose
 		local root_volume_device_name=$(aws ec2 describe-images $global_aws_options --image-ids "$PUNCH_AMI" --output text --query 'Images[].BlockDeviceMappings[0].DeviceName')
 		{ set +x; } 2>/dev/null
@@ -353,7 +353,7 @@ command_run() {
 	echo $instance_ids
 
 	# Add tags
-	if [ ! -z "${tags:-}" ]; then
+	if [ -n "${tags:-}" ]; then
 		start_verbose
 		PAGER= aws ec2 create-tags $additional_aws_options $global_aws_options --resources $instance_ids --tags $tags
 		{ set +x; } 2>/dev/null
@@ -434,10 +434,10 @@ wait_for_port() {
 	local delay=5
 
 	ssh_options=-t
-	if [ ! -z "${PUNCH_IDENTITY:-}" ]; then
+	if [ -n "${PUNCH_IDENTITY:-}" ]; then
 		ssh_options="$ssh_options -i $PUNCH_IDENTITY"
 	fi
-	if [ ! -z "${PUNCH_USERNAME:-}" ]; then
+	if [ -n "${PUNCH_USERNAME:-}" ]; then
 		ssh_options="$ssh_options -l $PUNCH_USERNAME"
 	fi
 	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
@@ -465,11 +465,11 @@ add_tag_filter() {
 	tag_key=$(echo "$1=" | cut -d = -f 1)
 	tag_value=$(echo "$1=" | cut -d = -f 2)
 
-	if [ ! -z "$tag_key" -a ! -z "$tag_value" ]; then
+	if [ -n "$tag_key" -a -n "$tag_value" ]; then
 		filters="${filters:-} Name=tag:$tag_key,Values=$tag_value"
-	elif [ ! -z "$tag_key" ]; then
+	elif [ -n "$tag_key" ]; then
 		filters="${filters:-} Name=tag-key,Values=$tag_key"
-	elif [ ! -z "$tag_value" ]; then
+	elif [ -n "$tag_value" ]; then
 		filters="${filters:-} Name=tag-value,Values=$tag_value"
 	fi
 }
@@ -516,27 +516,27 @@ control_options() {
 }
 
 add_configuration_filters() {
-	if [ ! -z "${PUNCH_AMI:-}" ]; then
+	if [ -n "${PUNCH_AMI:-}" ]; then
 		filters="${filters:-} Name=image-id,Values=$PUNCH_AMI"
 	fi
-	if [ ! -z "${PUNCH_SECURITY_GROUP:-}" ]; then
+	if [ -n "${PUNCH_SECURITY_GROUP:-}" ]; then
 		filters="${filters:-} Name=instance.group-id,Values=$PUNCH_SECURITY_GROUP"
 	fi
-	if [ ! -z "${PUNCH_SUBNET:-}" ]; then
+	if [ -n "${PUNCH_SUBNET:-}" ]; then
 		filters="${filters:-} Name=network-interface.subnet-id,Values=$PUNCH_SUBNET"
 	fi
-	if [ ! -z "${PUNCH_KEY_NAME:-}" ]; then
+	if [ -n "${PUNCH_KEY_NAME:-}" ]; then
 		filters="${filters:-} Name=key-name,Values=$PUNCH_KEY_NAME"
 	fi
-	if [ ! -z "${PUNCH_INSTANCE_TYPE:-}" ]; then
+	if [ -n "${PUNCH_INSTANCE_TYPE:-}" ]; then
 		filters="${filters:-} Name=instance-type,Values=$PUNCH_INSTANCE_TYPE"
 	fi
-	if [ ! -z "${PUNCH_TAGS:-}" ]; then
+	if [ -n "${PUNCH_TAGS:-}" ]; then
 		for tag in $PUNCH_TAGS; do
 			add_tag_filter "$tag"
 		done
 	fi
-	if [ ! -z "${PUNCH_NAME:-}" ]; then
+	if [ -n "${PUNCH_NAME:-}" ]; then
 		add_tag_filter "Name=$PUNCH_NAME"
 	fi
 }
@@ -649,10 +649,10 @@ command_ssh() {
 	get_ips
 
 	ssh_options=-t
-	if [ ! -z "${PUNCH_IDENTITY:-}" ]; then
+	if [ -n "${PUNCH_IDENTITY:-}" ]; then
 		ssh_options="$ssh_options -i $PUNCH_IDENTITY"
 	fi
-	if [ ! -z "${PUNCH_USERNAME:-}" ]; then
+	if [ -n "${PUNCH_USERNAME:-}" ]; then
 		ssh_options="$ssh_options -l $PUNCH_USERNAME"
 	fi
 	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
@@ -673,7 +673,7 @@ command_scp() {
 	filters="${filters:-} Name=instance-state-name,Values=running,pending"
 
 	ssh_options=
-	if [ ! -z "${PUNCH_IDENTITY:-}" ]; then
+	if [ -n "${PUNCH_IDENTITY:-}" ]; then
 		ssh_options="$ssh_options -i $PUNCH_IDENTITY"
 	fi
 	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
@@ -699,7 +699,7 @@ command_scp() {
 		get_ips
 		source_prefix="$ips:"
 
-		if [ ! -z "${PUNCH_USERNAME:-}" ]; then
+		if [ -n "${PUNCH_USERNAME:-}" ]; then
 			source_prefix="$PUNCH_USERNAME@$source_prefix"
 		fi
 
@@ -741,7 +741,7 @@ command_scp() {
 			fi
 
 			local dest_prefix=
-			if [ ! -z "${PUNCH_USERNAME:-}" ]; then
+			if [ -n "${PUNCH_USERNAME:-}" ]; then
 				dest_prefix="$PUNCH_USERNAME@"
 			fi
 
@@ -770,10 +770,10 @@ command_csshX() {
 
 	csshX_options=
 	ssh_options=
-	if [ ! -z "${PUNCH_IDENTITY:-}" ]; then
+	if [ -n "${PUNCH_IDENTITY:-}" ]; then
 		ssh_options="$ssh_options -i $PUNCH_IDENTITY"
 	fi
-	if [ ! -z "${PUNCH_USERNAME:-}" ]; then
+	if [ -n "${PUNCH_USERNAME:-}" ]; then
 		csshX_options="$csshX_options --login $PUNCH_USERNAME"
 	fi
 	ssh_options="$ssh_options -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -q"
